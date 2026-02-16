@@ -426,9 +426,12 @@
 
         <div class="detail-body">
             <div>
-                @if($business->owner_name)
-                    <div class="section" style="padding: 16px; background: var(--bg); border-radius: 8px; margin-bottom: 24px;">
-                        <p style="margin: 0; color: var(--text);"><strong>Owner:</strong> {{ $business->owner_name }}</p>
+                @if($business->owner_name || $business->owner_image_url)
+                    <div class="section" style="padding: 16px; background: var(--bg); border-radius: 8px; margin-bottom: 24px; display: flex; gap: 12px; align-items: center;">
+                        @if($business->owner_image_url)
+                            <img src="{{ $business->owner_image_url }}" alt="{{ $business->owner_name ?? 'Owner' }}" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover;">
+                        @endif
+                        <p style="margin: 0; color: var(--text);"><strong>Owner:</strong> {{ $business->owner_name ?? '—' }}</p>
                     </div>
                 @endif
                 

@@ -11,6 +11,7 @@ class Business extends Model
     protected $fillable = [
         'user_id',
         'owner_name',
+        'owner_image_url',
         'years_of_business',
         'category_id',
         'name',
@@ -64,6 +65,11 @@ class Business extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(BusinessPayment::class);
     }
 
     public function jobs(): HasMany

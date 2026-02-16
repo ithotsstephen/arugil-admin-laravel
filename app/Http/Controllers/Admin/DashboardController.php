@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
+use App\Models\BusinessPayment;
 use App\Models\User;
 use App\Models\Review;
 use App\Models\Job;
@@ -43,14 +44,41 @@ class DashboardController extends Controller
             $cursor->addMonth();
         }
 
+        $paymentStart = Carbon::now()->startOfMonth()->subMonths(5);
+        $paymentEnd = Carbon::now()->endOfMonth();
+
+        $paymentGrowth = BusinessPayment::query()
+            ->selectRaw("to_char(paid_at, 'YYYY-MM') as month, sum(amount) as total")
+            ->whereBetween('paid_at', [$paymentStart, $paymentEnd])
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('total', 'month')
+            ->toArray();
+
+        $paymentMonths = [];
+        $paymentCursor = $paymentStart->copy();
+        while ($paymentCursor <= $paymentEnd) {
+            $key = $paymentCursor->format('Y-m');
+            $paymentMonths[$key] = (float) ($paymentGrowth[$key] ?? 0);
+            $paymentCursor->addMonth();
+        }
+
+        $payments = BusinessPayment::with('business')
+            ->orderByDesc('paid_at')
+            ->limit(10)
+            ->get();
+
         $revenueSummary = [
-            'monthly' => 0,
-            'ytd' => 0,
+            'monthly' => (float) BusinessPayment::whereBetween('paid_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()])->sum('amount'),
+            'ytd' => (float) BusinessPayment::whereBetween('paid_at', [Carbon::now()->startOfYear(), Carbon::now()->endOfYear()])->sum('amount'),
+            'total' => (float) BusinessPayment::sum('amount'),
         ];
 
         return view('admin.dashboard', [
             'stats' => $stats,
             'months' => $months,
+            'paymentMonths' => $paymentMonths,
+            'payments' => $payments,
             'revenueSummary' => $revenueSummary,
         ]);
     }

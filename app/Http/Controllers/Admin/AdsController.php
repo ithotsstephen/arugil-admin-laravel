@@ -11,15 +11,47 @@ class AdsController extends Controller
 {
     public function index(Request $request)
     {
-        $ads = Ad::query()
-            ->with('category')
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
-            ->orderByDesc('created_at')
-            ->paginate(20);
+        $adsQuery = Ad::query()
+            ->with(['category.parent'])
+            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')));
+
+        if ($request->filled('main_category')) {
+            $mainCategoryId = $request->integer('main_category');
+            $adsQuery->whereHas('category', function ($query) use ($mainCategoryId) {
+                $query->where('id', $mainCategoryId)
+                    ->orWhere('parent_id', $mainCategoryId);
+            });
+        }
+
+        if ($request->filled('sub_category')) {
+            $adsQuery->where('category_id', $request->integer('sub_category'));
+        }
+
+        if ($request->filled('sort')) {
+            $adsQuery->leftJoin('categories as c', 'c.id', '=', 'ads.category_id')
+                ->leftJoin('categories as p', 'p.id', '=', 'c.parent_id')
+                ->select('ads.*');
+
+            $sort = $request->string('sort')->toString();
+            if ($sort === 'main_category_asc') {
+                $adsQuery->orderByRaw("coalesce(p.name, c.name) asc");
+            } elseif ($sort === 'main_category_desc') {
+                $adsQuery->orderByRaw("coalesce(p.name, c.name) desc");
+            } elseif ($sort === 'sub_category_asc') {
+                $adsQuery->orderBy('c.name');
+            } elseif ($sort === 'sub_category_desc') {
+                $adsQuery->orderByDesc('c.name');
+            }
+        } else {
+            $adsQuery->orderByDesc('created_at');
+        }
+
+        $ads = $adsQuery->paginate(20)->withQueryString();
 
         $categories = Category::with('children')->whereNull('parent_id')->orderBy('name')->get();
+        $subCategories = Category::whereNotNull('parent_id')->orderBy('name')->get();
 
-        return view('admin.ads.index', compact('ads', 'categories'));
+        return view('admin.ads.index', compact('ads', 'categories', 'subCategories'));
     }
 
     public function store(Request $request)

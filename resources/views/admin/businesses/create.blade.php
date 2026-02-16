@@ -31,6 +31,26 @@
         
         <label>Owner Name</label>
         <input type="text" name="owner_name" value="{{ old('owner_name') }}" placeholder="Enter owner's name">
+
+        <label>Owner DP Image</label>
+        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 14px;">
+            <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="owner_image_type" value="upload" checked onchange="toggleOwnerImageInput()">
+                    <span>Upload Image</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="owner_image_type" value="url" onchange="toggleOwnerImageInput()">
+                    <span>Image URL</span>
+                </label>
+            </div>
+            <div id="owner_upload_input">
+                <input type="file" name="owner_image_file" accept="image/*">
+            </div>
+            <div id="owner_url_input" style="display: none;">
+                <input type="url" name="owner_image_url" placeholder="https://example.com/owner.jpg" value="{{ old('owner_image_url') }}">
+            </div>
+        </div>
         
         <label>Years of Business</label>
         <input type="number" name="years_of_business" value="{{ old('years_of_business') }}" placeholder="Enter years in business" min="0" max="150">
@@ -182,6 +202,33 @@
             </div>
         </div>
         <button type="button" class="btn" onclick="addGalleryImage()" style="background: #10b981; margin-top: 8px;">+ Add Gallery Image</button>
+
+        <h3 style="margin: 24px 0 16px;">Payments</h3>
+        <p class="muted" style="margin-top: -6px; margin-bottom: 12px; font-size: 12px;">Record payments made by the business (currency: ₹ INR).</p>
+
+        <div id="paymentsContainer">
+            <div class="payment-item" style="border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                    <h4 style="margin: 0; font-size: 14px; color: var(--text);">Payment #1</h4>
+                    <button type="button" class="btn" onclick="removePayment(this)" style="background: #ef4444; padding: 6px 12px; font-size: 12px;">✕</button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label>Amount (₹)</label>
+                        <input type="number" name="payments[0][amount]" step="0.01" min="0">
+                    </div>
+                    <div>
+                        <label>Payment Date</label>
+                        <input type="date" name="payments[0][paid_at]" value="{{ now()->format('Y-m-d') }}">
+                    </div>
+                </div>
+                <label>Transaction ID</label>
+                <input type="text" name="payments[0][transaction_id]" placeholder="Optional">
+                <label>Description</label>
+                <textarea name="payments[0][description]" rows="2" placeholder="Payment notes (optional)"></textarea>
+            </div>
+        </div>
+        <button type="button" class="btn" onclick="addPayment()" style="background: #10b981; margin-top: 8px;">+ Add Payment</button>
         
         <h3 style="margin: 24px 0 16px;">Status</h3>
         
@@ -211,6 +258,7 @@
 let serviceIndex = 1;
 let offerIndex = 1;
 let galleryIndex = 1;
+let paymentIndex = 1;
 
 function toggleImageInput(type) {
     const uploadInput = document.getElementById(type + '_upload_input');
@@ -249,6 +297,20 @@ function toggleGalleryImageInput(index) {
     const urlInput = document.getElementById('gallery_' + index + '_url');
     const radio = document.querySelector('input[name="gallery[' + index + '][image_type]"]:checked').value;
     
+    if (radio === 'upload') {
+        uploadInput.style.display = 'block';
+        urlInput.style.display = 'none';
+    } else {
+        uploadInput.style.display = 'none';
+        urlInput.style.display = 'block';
+    }
+}
+
+function toggleOwnerImageInput() {
+    const uploadInput = document.getElementById('owner_upload_input');
+    const urlInput = document.getElementById('owner_url_input');
+    const radio = document.querySelector('input[name="owner_image_type"]:checked').value;
+
     if (radio === 'upload') {
         uploadInput.style.display = 'block';
         urlInput.style.display = 'none';
@@ -376,6 +438,39 @@ function addGalleryImage() {
 
 function removeGalleryImage(btn) {
     btn.closest('.gallery-item').remove();
+}
+
+function addPayment() {
+    const container = document.getElementById('paymentsContainer');
+    const newPayment = document.createElement('div');
+    newPayment.className = 'payment-item';
+    newPayment.style.cssText = 'border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 12px;';
+    newPayment.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 14px; color: var(--text);">Payment #${paymentIndex + 1}</h4>
+            <button type="button" class="btn" onclick="removePayment(this)" style="background: #ef4444; padding: 6px 12px; font-size: 12px;">✕</button>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+                <label>Amount (₹)</label>
+                <input type="number" name="payments[${paymentIndex}][amount]" step="0.01" min="0">
+            </div>
+            <div>
+                <label>Payment Date</label>
+                <input type="date" name="payments[${paymentIndex}][paid_at]" value="{{ now()->format('Y-m-d') }}">
+            </div>
+        </div>
+        <label>Transaction ID</label>
+        <input type="text" name="payments[${paymentIndex}][transaction_id]" placeholder="Optional">
+        <label>Description</label>
+        <textarea name="payments[${paymentIndex}][description]" rows="2" placeholder="Payment notes (optional)"></textarea>
+    `;
+    container.appendChild(newPayment);
+    paymentIndex++;
+}
+
+function removePayment(btn) {
+    btn.closest('.payment-item').remove();
 }
 </script>
 @endsection

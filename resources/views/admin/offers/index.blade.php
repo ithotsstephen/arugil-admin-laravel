@@ -21,9 +21,9 @@
     </form>
 </div>
 
-@if(count($allOffers) > 0)
+@if($offers->count() > 0)
     <div style="display: grid; gap: 16px;">
-        @foreach($allOffers as $offer)
+        @foreach($offers as $offer)
             <div class="card" style="display: grid; grid-template-columns: 200px 1fr auto; gap: 20px; align-items: center;">
                 <div>
                     @if($offer['image_url'])
@@ -81,6 +81,8 @@
         <p>Businesses haven't added any special offers yet.</p>
     </div>
 @endif
+
+{{ $offers->links() }}
 
 <style>
     .filters select {

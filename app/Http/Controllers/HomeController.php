@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Business;
 use App\Models\Category;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class HomeController extends Controller
 {
@@ -56,5 +58,60 @@ class HomeController extends Controller
             ->get();
 
         return view('home.show', compact('business', 'relatedBusinesses'));
+    }
+
+    public function offers()
+    {
+        $businesses = Business::query()
+            ->where('is_approved', true)
+            ->where(function ($query) {
+                $query->whereNull('expiry_date')
+                    ->orWhere('expiry_date', '>=', now());
+            })
+            ->whereNotNull('offers')
+            ->with(['category'])
+            ->get();
+
+        $offers = collect();
+
+        foreach ($businesses as $business) {
+            if (!is_array($business->offers)) {
+                continue;
+            }
+
+            foreach ($business->offers as $offer) {
+                if (empty($offer['start_date']) || empty($offer['end_date'])) {
+                    continue;
+                }
+
+                $startDate = Carbon::parse($offer['start_date']);
+                $endDate = Carbon::parse($offer['end_date']);
+
+                if (!now()->between($startDate, $endDate)) {
+                    continue;
+                }
+
+                $offers->push([
+                    'business' => $business,
+                    'image_url' => $offer['image_url'] ?? null,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                ]);
+            }
+        }
+
+        $offers = $offers->sortByDesc(fn ($offer) => $offer['end_date'])->values();
+
+        $perPage = 12;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $offers = new LengthAwarePaginator(
+            $offers->forPage($page, $perPage)->values(),
+            $offers->count(),
+            $perPage,
+            $page,
+            ['path' => LengthAwarePaginator::resolveCurrentPath()]
+        );
+
+        return view('home.offers', compact('offers'));
     }
 }

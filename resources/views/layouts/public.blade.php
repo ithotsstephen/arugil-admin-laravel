@@ -283,6 +283,7 @@
             <h1>🏢 Business Directory</h1>
             <nav>
                 <a href="/">Home</a>
+                <a href="/offers">Offers</a>
                 <a href="/admin">Admin</a>
             </nav>
         </div>

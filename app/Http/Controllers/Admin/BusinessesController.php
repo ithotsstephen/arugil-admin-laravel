@@ -46,6 +46,8 @@ class BusinessesController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'owner_name' => ['nullable', 'string', 'max:255'],
+            'owner_image_url' => ['nullable', 'url', 'max:2048'],
+            'owner_image_file' => ['nullable', 'image', 'max:5120'],
             'years_of_business' => ['nullable', 'integer', 'min:0', 'max:150'],
             'category_id' => ['required', 'exists:categories,id'],
             'description' => ['nullable', 'string'],
@@ -68,12 +70,23 @@ class BusinessesController extends Controller
             'image_file' => ['nullable', 'image', 'max:5120'],
             'expiry_date' => ['nullable', 'date'],
             'is_approved' => ['nullable', 'boolean'],
+            'payments' => ['nullable', 'array'],
+            'payments.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'payments.*.paid_at' => ['nullable', 'date'],
+            'payments.*.description' => ['nullable', 'string'],
+            'payments.*.transaction_id' => ['nullable', 'string', 'max:255'],
         ]);
 
         // Handle hero image upload
         if ($request->hasFile('image_file')) {
             $path = $request->file('image_file')->store('businesses', 'public');
             $data['image_url'] = '/storage/' . $path;
+        }
+
+        // Handle owner image upload
+        if ($request->hasFile('owner_image_file')) {
+            $path = $request->file('owner_image_file')->store('businesses/owners', 'public');
+            $data['owner_image_url'] = '/storage/' . $path;
         }
 
         // Handle offer images
@@ -94,8 +107,30 @@ class BusinessesController extends Controller
         $data['is_approved'] = $request->boolean('is_approved', false);
         $data['expiry_date'] = $data['expiry_date'] ?? now()->addYear();
         unset($data['image_file']);
+        unset($data['owner_image_file']);
 
         $business = Business::create($data);
+
+        if ($request->has('payments')) {
+            $payments = collect($request->input('payments'))
+                ->filter(function ($payment) {
+                    return !empty($payment['amount']) && !empty($payment['paid_at']);
+                })
+                ->map(function ($payment) {
+                    return [
+                        'amount' => $payment['amount'],
+                        'paid_at' => $payment['paid_at'],
+                        'description' => $payment['description'] ?? null,
+                        'transaction_id' => $payment['transaction_id'] ?? null,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            if (!empty($payments)) {
+                $business->payments()->createMany($payments);
+            }
+        }
 
         // Handle gallery images
         if ($request->has('gallery')) {
@@ -129,6 +164,8 @@ class BusinessesController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'owner_name' => ['nullable', 'string', 'max:255'],
+            'owner_image_url' => ['nullable', 'url', 'max:2048'],
+            'owner_image_file' => ['nullable', 'image', 'max:5120'],
             'years_of_business' => ['nullable', 'integer', 'min:0', 'max:150'],
             'category_id' => ['required', 'exists:categories,id'],
             'description' => ['nullable', 'string'],
@@ -152,12 +189,23 @@ class BusinessesController extends Controller
             'expiry_date' => ['nullable', 'date'],
             'is_featured' => ['nullable', 'boolean'],
             'is_approved' => ['nullable', 'boolean'],
+            'payments' => ['nullable', 'array'],
+            'payments.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'payments.*.paid_at' => ['nullable', 'date'],
+            'payments.*.description' => ['nullable', 'string'],
+            'payments.*.transaction_id' => ['nullable', 'string', 'max:255'],
         ]);
 
         // Handle hero image upload
         if ($request->hasFile('image_file')) {
             $path = $request->file('image_file')->store('businesses', 'public');
             $data['image_url'] = '/storage/' . $path;
+        }
+
+        // Handle owner image upload
+        if ($request->hasFile('owner_image_file')) {
+            $path = $request->file('owner_image_file')->store('businesses/owners', 'public');
+            $data['owner_image_url'] = '/storage/' . $path;
         }
 
         // Handle offer images
@@ -183,7 +231,29 @@ class BusinessesController extends Controller
         }
 
         unset($data['image_file']);
+        unset($data['owner_image_file']);
         $business->update($data);
+
+        if ($request->has('payments')) {
+            $payments = collect($request->input('payments'))
+                ->filter(function ($payment) {
+                    return !empty($payment['amount']) && !empty($payment['paid_at']);
+                })
+                ->map(function ($payment) {
+                    return [
+                        'amount' => $payment['amount'],
+                        'paid_at' => $payment['paid_at'],
+                        'description' => $payment['description'] ?? null,
+                        'transaction_id' => $payment['transaction_id'] ?? null,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            if (!empty($payments)) {
+                $business->payments()->createMany($payments);
+            }
+        }
 
         // Handle gallery images
         if ($request->has('gallery')) {

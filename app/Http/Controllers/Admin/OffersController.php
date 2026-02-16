@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class OffersController extends Controller
 {
@@ -68,6 +69,17 @@ class OffersController extends Controller
             return $b['start_date'] <=> $a['start_date'];
         });
 
-        return view('admin.offers.index', compact('allOffers'));
+        $perPage = 20;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $offersCollection = collect($allOffers);
+        $offers = new LengthAwarePaginator(
+            $offersCollection->forPage($page, $perPage)->values(),
+            $offersCollection->count(),
+            $perPage,
+            $page,
+            ['path' => LengthAwarePaginator::resolveCurrentPath(), 'query' => $request->query()]
+        );
+
+        return view('admin.offers.index', compact('offers'));
     }
 }
