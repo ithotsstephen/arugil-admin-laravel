@@ -43,6 +43,7 @@ Route::prefix('admin')
         // Admin and Moderator only routes
         Route::middleware('role:super_admin,moderator')->group(function () {
             Route::get('/users', [UsersController::class, 'index'])->name('users.index');
+            Route::get('/mobile-users', [UsersController::class, 'mobile'])->name('users.mobile');
             Route::get('/users/create', [UsersController::class, 'create'])->name('users.create');
             Route::post('/users', [UsersController::class, 'store'])->name('users.store');
             Route::get('/users/{user}/edit', [UsersController::class, 'edit'])->name('users.edit');
@@ -60,6 +61,8 @@ Route::prefix('admin')
         Route::get('/businesses/{business}/edit', [BusinessesController::class, 'edit'])->name('businesses.edit');
         Route::put('/businesses/{business}', [BusinessesController::class, 'update'])->name('businesses.update');
         Route::delete('/businesses/gallery/{id}', [BusinessesController::class, 'deleteGalleryImage'])->name('businesses.gallery.delete');
+        Route::delete('/businesses/payments/{payment}', [BusinessesController::class, 'deletePayment'])->name('businesses.payments.delete');
+        Route::put('/businesses/payments/{payment}', [BusinessesController::class, 'updatePayment'])->name('businesses.payments.update');
         
         // Admin and Moderator only - business approval actions
         Route::middleware('role:super_admin,moderator')->group(function () {

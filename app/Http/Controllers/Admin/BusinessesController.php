@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
+use App\Models\BusinessPayment;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class BusinessesController extends Controller
 {
@@ -75,6 +77,14 @@ class BusinessesController extends Controller
             'payments.*.paid_at' => ['nullable', 'date'],
             'payments.*.description' => ['nullable', 'string'],
             'payments.*.transaction_id' => ['nullable', 'string', 'max:255'],
+            'existing_payments' => ['nullable', 'array'],
+            'existing_payments.*.id' => ['required', 'exists:business_payments,id'],
+            'existing_payments.*.amount' => ['required', 'numeric', 'min:0'],
+            'existing_payments.*.paid_at' => ['required', 'date'],
+            'existing_payments.*.description' => ['nullable', 'string'],
+            'existing_payments.*.transaction_id' => ['nullable', 'string', 'max:255'],
+            'delete_payments' => ['nullable', 'array'],
+            'delete_payments.*' => ['required', 'exists:business_payments,id'],
         ]);
 
         // Handle hero image upload
@@ -130,6 +140,27 @@ class BusinessesController extends Controller
             if (!empty($payments)) {
                 $business->payments()->createMany($payments);
             }
+        }
+
+        if ($request->has('existing_payments')) {
+            foreach ($request->input('existing_payments') as $paymentData) {
+                $payment = $business->payments()->whereKey($paymentData['id'])->first();
+
+                if ($payment) {
+                    $payment->update([
+                        'amount' => $paymentData['amount'],
+                        'paid_at' => $paymentData['paid_at'],
+                        'description' => $paymentData['description'] ?? null,
+                        'transaction_id' => $paymentData['transaction_id'] ?? null,
+                    ]);
+                }
+            }
+        }
+
+        if ($request->filled('delete_payments')) {
+            $business->payments()
+                ->whereIn('id', $request->input('delete_payments'))
+                ->delete();
         }
 
         // Handle gallery images
@@ -307,6 +338,27 @@ class BusinessesController extends Controller
         }
         
         $image->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function deletePayment(BusinessPayment $payment)
+    {
+        $payment->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function updatePayment(Request $request, BusinessPayment $payment): JsonResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0'],
+            'paid_at' => ['required', 'date'],
+            'description' => ['nullable', 'string'],
+            'transaction_id' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $payment->update($data);
 
         return response()->json(['success' => true]);
     }

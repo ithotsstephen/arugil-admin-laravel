@@ -118,4 +118,34 @@
         </table>
     </div>
 </div>
+
+<div class="grid-2" style="margin-top: 24px;">
+    <div class="card">
+        <h3>Recent Users</h3>
+        <table style="margin-top: 8px;">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Joined</th>
+            </tr>
+            </thead>
+            <tbody>
+            @forelse($recentUsers as $user)
+                <tr>
+                    <td>{{ $user->name }}</td>
+                    <td>{{ $user->phone ?? '—' }}</td>
+                    <td>{{ $user->email }}</td>
+                    <td>{{ $user->created_at?->format('Y-m-d') }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="4">No users yet.</td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
 @endsection

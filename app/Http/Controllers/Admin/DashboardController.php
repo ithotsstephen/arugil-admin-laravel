@@ -68,6 +68,11 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        $recentUsers = User::query()
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get(['id', 'name', 'phone', 'email', 'created_at']);
+
         $revenueSummary = [
             'monthly' => (float) BusinessPayment::whereBetween('paid_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()])->sum('amount'),
             'ytd' => (float) BusinessPayment::whereBetween('paid_at', [Carbon::now()->startOfYear(), Carbon::now()->endOfYear()])->sum('amount'),
@@ -79,6 +84,7 @@ class DashboardController extends Controller
             'months' => $months,
             'paymentMonths' => $paymentMonths,
             'payments' => $payments,
+            'recentUsers' => $recentUsers,
             'revenueSummary' => $revenueSummary,
         ]);
     }

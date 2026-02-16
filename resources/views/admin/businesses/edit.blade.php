@@ -298,26 +298,44 @@
         @if($business->payments->count() > 0)
             <div style="border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
                 <h4 style="margin: 0 0 10px; font-size: 14px;">Existing Payments</h4>
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Amount (₹)</th>
-                        <th>Transaction</th>
-                        <th>Description</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach($business->payments()->orderByDesc('paid_at')->get() as $payment)
-                        <tr>
-                            <td>{{ $payment->paid_at?->format('Y-m-d') }}</td>
-                            <td>₹{{ number_format($payment->amount, 2) }}</td>
-                            <td>{{ $payment->transaction_id ?? '—' }}</td>
-                            <td>{{ $payment->description ?? '—' }}</td>
-                        </tr>
+                <div style="display: grid; gap: 12px;">
+                    @foreach($business->payments()->orderByDesc('paid_at')->get() as $index => $payment)
+                        <div class="payment-row" style="border: 1px dashed var(--border); padding: 12px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                                <div>
+                                    <strong>₹{{ number_format($payment->amount, 2) }}</strong>
+                                    <span class="muted" style="margin-left: 8px; font-size: 12px;">{{ $payment->paid_at?->format('Y-m-d') }}</span>
+                                    <span class="muted" style="margin-left: 8px; font-size: 12px;">{{ $payment->transaction_id ?? '—' }}</span>
+                                </div>
+                                <div class="actions">
+                                    <button type="button" class="btn" onclick="togglePaymentEdit({{ $payment->id }})">Edit</button>
+                                    <button type="button" class="btn" data-delete-url="{{ route('admin.businesses.payments.delete', $payment) }}" onclick="deletePayment(this)" style="background: #ef4444; color: #fff;">Delete</button>
+                                </div>
+                            </div>
+
+                            <div id="payment_edit_{{ $payment->id }}" style="display: none; margin-top: 12px;">
+                                <input type="hidden" name="existing_payments[{{ $index }}][id]" value="{{ $payment->id }}">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <div>
+                                        <label>Amount (₹)</label>
+                                        <input type="number" name="existing_payments[{{ $index }}][amount]" step="0.01" min="0" value="{{ $payment->amount }}">
+                                    </div>
+                                    <div>
+                                        <label>Payment Date</label>
+                                        <input type="date" name="existing_payments[{{ $index }}][paid_at]" value="{{ $payment->paid_at?->format('Y-m-d') }}">
+                                    </div>
+                                </div>
+                                <label>Transaction ID</label>
+                                <input type="text" name="existing_payments[{{ $index }}][transaction_id]" value="{{ $payment->transaction_id }}" placeholder="Optional">
+                                <label>Description</label>
+                                <textarea name="existing_payments[{{ $index }}][description]" rows="2" placeholder="Payment notes (optional)">{{ $payment->description }}</textarea>
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button type="button" class="btn btn-primary" data-update-url="{{ route('admin.businesses.payments.update', $payment) }}" onclick="savePayment(this)">Save Payment</button>
+                                </div>
+                            </div>
+                        </div>
                     @endforeach
-                    </tbody>
-                </table>
+                </div>
             </div>
         @endif
 
@@ -609,6 +627,75 @@ function addPayment() {
 
 function removePayment(btn) {
     btn.closest('.payment-item').remove();
+}
+
+function togglePaymentEdit(id) {
+    const panel = document.getElementById(`payment_edit_${id}`);
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function deletePayment(button) {
+    if (!confirm('Delete this payment?')) return;
+
+    const url = button.getAttribute('data-delete-url');
+    if (!url) return;
+
+    fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const row = button.closest('.payment-row');
+                if (row) {
+                    row.remove();
+                }
+            } else {
+                alert('Failed to delete payment');
+            }
+        })
+        .catch(() => alert('Failed to delete payment'));
+}
+
+function savePayment(button) {
+    const url = button.getAttribute('data-update-url');
+    if (!url) return;
+
+    const panel = button.closest('[id^="payment_edit_"]');
+    if (!panel) return;
+
+    const amount = panel.querySelector('input[name$="[amount]"]')?.value;
+    const paidAt = panel.querySelector('input[name$="[paid_at]"]')?.value;
+    const transactionId = panel.querySelector('input[name$="[transaction_id]"]')?.value || null;
+    const description = panel.querySelector('textarea[name$="[description]"]')?.value || null;
+
+    fetch(url, {
+        method: 'PUT',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            amount: amount,
+            paid_at: paidAt,
+            transaction_id: transactionId,
+            description: description
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                panel.style.display = 'none';
+            } else {
+                alert('Failed to save payment');
+            }
+        })
+        .catch(() => alert('Failed to save payment'));
 }
 </script>
 @endsection

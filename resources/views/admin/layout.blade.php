@@ -53,6 +53,7 @@
             
             @if(auth()->user()->hasRole('super_admin', 'moderator'))
                 <a href="{{ route('admin.users.index') }}">Users</a>
+                <a href="{{ route('admin.users.mobile') }}">Mobile Users</a>
                 <a href="{{ route('admin.categories.index') }}">Categories</a>
             @endif
             

@@ -20,6 +20,27 @@ class UsersController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
+    public function mobile(Request $request)
+    {
+        $users = User::query()
+            ->where('role', 'user')
+            ->whereNotNull('phone')
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = $request->string('search');
+
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', '%' . $search . '%')
+                        ->orWhere('email', 'like', '%' . $search . '%')
+                        ->orWhere('phone', 'like', '%' . $search . '%');
+                });
+            })
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin.users.mobile', compact('users'));
+    }
+
     public function create()
     {
         return view('admin.users.create');
