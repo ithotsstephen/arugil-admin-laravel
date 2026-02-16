@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmergencyController;
 use App\Http\Controllers\Api\V1\JobController;
 use App\Http\Controllers\Api\V1\ReviewController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,7 @@ Route::prefix('v1')->group(function () {
     Route::get('ads', [AdController::class, 'index']);
     Route::post('ads/{ad}/click', [AdController::class, 'click']);
     Route::get('emergency', [EmergencyController::class, 'index']);
+    Route::get('business/{business}/payments', [PaymentController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('user', function (Request $request) {
@@ -55,5 +57,7 @@ Route::prefix('v1')->group(function () {
 
         Route::post('jobs', [JobController::class, 'store']);
         Route::post('job/apply', [JobController::class, 'apply']);
+
+        Route::post('business/{business}/payment', [PaymentController::class, 'store']);
     });
 });
