@@ -40,7 +40,9 @@ class BusinessesController extends Controller
     public function create()
     {
         $categories = \App\Models\Category::with('children')->whereNull('parent_id')->get();
-        return view('admin.businesses.create', compact('categories'));
+        $states = \App\Models\State::orderBy('name')->get();
+        $areas = collect();
+        return view('admin.businesses.create', compact('categories', 'states', 'areas'));
     }
 
     public function store(Request $request)
@@ -52,6 +54,10 @@ class BusinessesController extends Controller
             'owner_image_file' => ['nullable', 'image', 'max:5120'],
             'years_of_business' => ['nullable', 'integer', 'min:0', 'max:150'],
             'category_id' => ['required', 'exists:categories,id'],
+            'state_id' => ['nullable', 'exists:states,id'],
+            'city_id' => ['nullable', 'exists:cities,id'],
+            'district_id' => ['nullable', 'exists:districts,id'],
+            'area_id' => ['nullable', 'exists:areas,id'],
             'description' => ['nullable', 'string'],
             'about_title' => ['nullable', 'string', 'max:255'],
             'services' => ['nullable', 'array'],
@@ -187,7 +193,15 @@ class BusinessesController extends Controller
     public function edit(Business $business)
     {
         $categories = \App\Models\Category::with('children')->whereNull('parent_id')->get();
-        return view('admin.businesses.edit', compact('business', 'categories'));
+        $states = \App\Models\State::orderBy('name')->get();
+        $cities = $business->state_id ? \App\Models\City::where('state_id', $business->state_id)->orderBy('name')->get() : collect();
+        $areas = \App\Models\Area::query()
+            ->when($business->city_id, fn ($q) => $q->where('city_id', $business->city_id))
+            ->when($business->district_id, fn ($q) => $q->where('district_id', $business->district_id))
+            ->orderBy('name')
+            ->get();
+        $districts = $business->state_id ? \App\Models\District::where('state_id', $business->state_id)->orderBy('name')->get() : collect();
+        return view('admin.businesses.edit', compact('business', 'categories', 'states', 'cities', 'districts', 'areas'));
     }
 
     public function update(Request $request, Business $business)
@@ -199,6 +213,10 @@ class BusinessesController extends Controller
             'owner_image_file' => ['nullable', 'image', 'max:5120'],
             'years_of_business' => ['nullable', 'integer', 'min:0', 'max:150'],
             'category_id' => ['required', 'exists:categories,id'],
+            'state_id' => ['nullable', 'exists:states,id'],
+            'city_id' => ['nullable', 'exists:cities,id'],
+            'district_id' => ['nullable', 'exists:districts,id'],
+            'area_id' => ['nullable', 'exists:areas,id'],
             'description' => ['nullable', 'string'],
             'about_title' => ['nullable', 'string', 'max:255'],
             'services' => ['nullable', 'array'],

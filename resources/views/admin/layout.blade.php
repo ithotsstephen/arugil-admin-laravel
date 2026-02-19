@@ -55,6 +55,7 @@
                 <a href="{{ route('admin.users.index') }}">Users</a>
                 <a href="{{ route('admin.users.mobile') }}">Mobile Users</a>
                 <a href="{{ route('admin.categories.index') }}">Categories</a>
+                <a href="{{ route('admin.locations.index') }}">Locations</a>
             @endif
             
             <a href="{{ route('admin.businesses.index') }}">Businesses</a>

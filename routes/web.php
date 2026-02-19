@@ -52,6 +52,24 @@ Route::prefix('admin')
             Route::post('/categories', [CategoriesController::class, 'store'])->name('categories.store');
             Route::put('/categories/{category}', [CategoriesController::class, 'update'])->name('categories.update');
             Route::delete('/categories/{category}', [CategoriesController::class, 'destroy'])->name('categories.destroy');
+            
+            // Locations management
+            Route::get('/locations', [\App\Http\Controllers\Admin\LocationsController::class, 'index'])->name('locations.index');
+            Route::post('/locations/states', [\App\Http\Controllers\Admin\LocationsController::class, 'storeState'])->name('locations.states.store');
+            Route::put('/locations/states/{state}', [\App\Http\Controllers\Admin\LocationsController::class, 'updateState'])->name('locations.states.update');
+            Route::delete('/locations/states/{state}', [\App\Http\Controllers\Admin\LocationsController::class, 'deleteState'])->name('locations.states.delete');
+            Route::post('/locations/cities', [\App\Http\Controllers\Admin\LocationsController::class, 'storeCity'])->name('locations.cities.store');
+            Route::put('/locations/cities/{city}', [\App\Http\Controllers\Admin\LocationsController::class, 'updateCity'])->name('locations.cities.update');
+            Route::delete('/locations/cities/{city}', [\App\Http\Controllers\Admin\LocationsController::class, 'deleteCity'])->name('locations.cities.delete');
+            Route::post('/locations/districts', [\App\Http\Controllers\Admin\LocationsController::class, 'storeDistrict'])->name('locations.districts.store');
+            Route::put('/locations/districts/{district}', [\App\Http\Controllers\Admin\LocationsController::class, 'updateDistrict'])->name('locations.districts.update');
+            Route::delete('/locations/districts/{district}', [\App\Http\Controllers\Admin\LocationsController::class, 'deleteDistrict'])->name('locations.districts.delete');
+            Route::post('/locations/areas', [\App\Http\Controllers\Admin\LocationsController::class, 'storeArea'])->name('locations.areas.store');
+            Route::put('/locations/areas/{area}', [\App\Http\Controllers\Admin\LocationsController::class, 'updateArea'])->name('locations.areas.update');
+            Route::delete('/locations/areas/{area}', [\App\Http\Controllers\Admin\LocationsController::class, 'deleteArea'])->name('locations.areas.delete');
+            Route::get('/api/locations/cities', [\App\Http\Controllers\Admin\LocationsController::class, 'getCities'])->name('locations.cities.get');
+            Route::get('/api/locations/districts', [\App\Http\Controllers\Admin\LocationsController::class, 'getDistricts'])->name('locations.districts.get');
+            Route::get('/api/locations/areas', [\App\Http\Controllers\Admin\LocationsController::class, 'getAreas'])->name('locations.areas.get');
         });
         
         // Business routes - accessible by managers too

@@ -14,6 +14,10 @@ class Business extends Model
         'owner_image_url',
         'years_of_business',
         'category_id',
+        'state_id',
+        'city_id',
+        'district_id',
+        'area_id',
         'name',
         'description',
         'about_title',
@@ -75,6 +79,26 @@ class Business extends Model
     public function jobs(): HasMany
     {
         return $this->hasMany(Job::class);
+    }
+
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(State::class);
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class);
+    }
+
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(District::class);
+    }
+
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
     }
 
     public function isExpired(): bool
