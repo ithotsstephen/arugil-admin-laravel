@@ -59,6 +59,10 @@
 
         <label>Pincode</label>
         <input type="text" id="pincode_display" placeholder="Pincode" readonly>
+
+            <label>Keywords <span style="font-size:12px; color:#888;">(up to 12, separated by commas)</span></label>
+            <input type="text" name="keywords" value="{{ old('keywords') }}" placeholder="e.g. restaurant, cafe, pizza, delivery" maxlength="255">
+            <p class="muted" style="font-size:12px; margin-bottom:16px;">Enter up to 12 keywords separated by commas. Example: pizza, pasta, Italian, delivery</p>
         
         <h3 style="margin: 24px 0 16px;">Business Details</h3>
         

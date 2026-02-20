@@ -91,7 +91,21 @@ class BusinessesController extends Controller
             'existing_payments.*.transaction_id' => ['nullable', 'string', 'max:255'],
             'delete_payments' => ['nullable', 'array'],
             'delete_payments.*' => ['required', 'exists:business_payments,id'],
+            'keywords' => ['nullable', 'string', 'max:255'],
         ]);
+
+        // Handle keywords: split by comma, trim, limit to 12
+        if (!empty($data['keywords'])) {
+            $keywords = collect(explode(',', $data['keywords']))
+                ->map(fn($k) => trim($k))
+                ->filter()
+                ->take(12)
+                ->values()
+                ->all();
+            $data['keywords'] = $keywords;
+        } else {
+            $data['keywords'] = [];
+        }
 
         // Handle hero image upload
         if ($request->hasFile('image_file')) {

@@ -20,6 +20,7 @@ class Business extends Model
         'area_id',
         'name',
         'description',
+        'keywords',
         'about_title',
         'services',
         'offers',
@@ -49,6 +50,7 @@ class Business extends Model
         'expiry_date' => 'date',
         'services' => 'array',
         'offers' => 'array',
+        'keywords' => 'array',
     ];
 
     public function owner(): BelongsTo
