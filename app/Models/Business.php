@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\BusinessLike;
 
 class Business extends Model
 {
@@ -66,6 +67,20 @@ class Business extends Model
     public function images(): HasMany
     {
         return $this->hasMany(BusinessImage::class);
+    }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(BusinessLike::class);
+    }
+
+    public function isLikedBy(?\App\Models\User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        return $this->likes()->where('user_id', $user->id)->exists();
     }
 
     public function reviews(): HasMany

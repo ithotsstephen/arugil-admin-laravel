@@ -103,10 +103,16 @@
             <td><span class="badge">{{ $ad->status }}</span></td>
             <td>{{ $ad->clicks }}</td>
             <td>{{ $ad->start_date?->format('Y-m-d') }} - {{ $ad->end_date?->format('Y-m-d') }}</td>
-            <td>
-                <form method="POST" action="{{ route('admin.ads.toggle', $ad) }}">
+            <td style="display:flex; gap:8px; align-items:center;">
+                <a class="btn" href="{{ route('admin.ads.edit', $ad) }}">Edit</a>
+                <form method="POST" action="{{ route('admin.ads.toggle', $ad) }}" style="display:inline;">
                     @csrf
                     <button class="btn" type="submit">Toggle</button>
+                </form>
+                <form method="POST" action="{{ route('admin.ads.destroy', $ad) }}" onsubmit="return confirm('Delete this ad?');" style="display:inline;">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-danger" type="submit">Delete</button>
                 </form>
             </td>
         </tr>

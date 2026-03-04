@@ -78,4 +78,35 @@ class AdsController extends Controller
 
         return redirect()->back()->with('status', 'Ad status updated.');
     }
+
+    public function edit(Ad $ad)
+    {
+        $categories = Category::with('children')->whereNull('parent_id')->orderBy('name')->get();
+        return view('admin.ads.edit', compact('ad', 'categories'));
+    }
+
+    public function update(Request $request, Ad $ad)
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'category_id' => ['nullable', 'exists:categories,id'],
+            'image_url' => ['required', 'string', 'max:2048'],
+            'link' => ['nullable', 'string', 'max:2048'],
+            'placement' => ['required', 'string', 'max:50'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date'],
+            'status' => ['required', 'string', 'max:50'],
+        ]);
+
+        $ad->update($data);
+
+        return redirect()->route('admin.ads.index')->with('status', 'Ad updated.');
+    }
+
+    public function destroy(Ad $ad)
+    {
+        $ad->delete();
+
+        return redirect()->route('admin.ads.index')->with('status', 'Ad deleted.');
+    }
 }

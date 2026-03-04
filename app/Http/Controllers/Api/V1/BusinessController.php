@@ -20,7 +20,26 @@ class BusinessController extends Controller
             })
             ->when($request->filled('category_id'), fn ($query) => $query->where('category_id', $request->integer('category_id')))
             ->when($request->boolean('featured'), fn ($query) => $query->where('is_featured', true))
+            ->when($request->filled('q'), function ($query) use ($request) {
+                $search = trim($request->string('q')->toString());
+                if ($search === '') {
+                    return;
+                }
+
+                $term = mb_strtolower($search, 'UTF-8');
+
+                $query->where(function ($q) use ($term) {
+                    $like = "%{$term}%";
+
+                    $q->whereRaw('LOWER(name) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(description, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(address, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(owner_name, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(keywords::text, \'\')) LIKE ?', [$like]);
+                });
+            })
             ->with(['category', 'owner'])
+            ->withCount('likes')
             ->paginate($request->integer('per_page', 15));
 
         return response()->json($businesses);
@@ -34,8 +53,13 @@ class BusinessController extends Controller
 
         $business->increment('views');
         $business->load(['category', 'owner', 'images', 'reviews']);
+        $business->loadCount('likes');
 
-        return response()->json($business);
+        $user = $request->user();
+        $payload = $business->toArray();
+        $payload['liked_by_user'] = $business->isLikedBy($user);
+
+        return response()->json($payload);
     }
 
     public function store(Request $request)
@@ -136,6 +160,7 @@ class BusinessController extends Controller
                       ->orWhere('expiry_date', '>=', now());
             })
             ->with(['category', 'owner'])
+            ->withCount('likes')
             ->paginate($request->integer('per_page', 15));
 
         return response()->json($businesses);
@@ -168,7 +193,46 @@ class BusinessController extends Controller
             })
             ->having('distance', '<', $radius)
             ->orderBy('distance')
+            ->withCount('likes')
             ->paginate($request->integer('per_page', 15));
+
+    }
+
+    public function like(Request $request, Business $business)
+    {
+        $user = $request->user();
+
+        if (!$business->is_approved || $business->isExpired()) {
+            return response()->json(['message' => 'Business not available.'], 403);
+        }
+
+        \App\Models\BusinessLike::firstOrCreate([
+            'business_id' => $business->id,
+            'user_id' => $user->id,
+        ]);
+
+        $business->loadCount('likes');
+
+        return response()->json([
+            'likes_count' => $business->likes_count,
+            'liked' => true,
+        ]);
+    }
+
+    public function unlike(Request $request, Business $business)
+    {
+        $user = $request->user();
+
+        \App\Models\BusinessLike::where('business_id', $business->id)
+            ->where('user_id', $user->id)
+            ->delete();
+
+        $business->loadCount('likes');
+
+        return response()->json([
+            'likes_count' => $business->likes_count,
+            'liked' => false,
+        ]);
 
         return response()->json($businesses);
     }

@@ -34,6 +34,10 @@ Route::get('/login', [LoginController::class, 'show'])->name('login')->middlewar
 Route::post('/login', [LoginController::class, 'store'])->name('login.store')->middleware('guest');
 Route::post('/logout', [LoginController::class, 'destroy'])->name('logout')->middleware('auth');
 
+// Social auth redirects/callbacks (web)
+Route::get('/auth/redirect/{provider}', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'redirect'])->name('social.redirect');
+Route::get('/auth/callback/{provider}', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'callback'])->name('social.callback');
+
 Route::prefix('admin')
     ->middleware(['auth', 'role:super_admin,moderator,manager'])
     ->name('admin.')
@@ -106,6 +110,9 @@ Route::prefix('admin')
             Route::get('/ads', [AdsController::class, 'index'])->name('ads.index');
             Route::post('/ads', [AdsController::class, 'store'])->name('ads.store');
             Route::post('/ads/{ad}/toggle', [AdsController::class, 'toggle'])->name('ads.toggle');
+            Route::get('/ads/{ad}/edit', [AdsController::class, 'edit'])->name('ads.edit');
+            Route::put('/ads/{ad}', [AdsController::class, 'update'])->name('ads.update');
+            Route::delete('/ads/{ad}', [AdsController::class, 'destroy'])->name('ads.destroy');
             Route::get('/emergency', [EmergencyController::class, 'index'])->name('emergency.index');
             Route::post('/emergency', [EmergencyController::class, 'store'])->name('emergency.store');
             Route::delete('/emergency/{emergency}', [EmergencyController::class, 'destroy'])->name('emergency.destroy');

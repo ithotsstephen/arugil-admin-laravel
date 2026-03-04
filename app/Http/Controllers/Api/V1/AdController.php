@@ -33,4 +33,39 @@ class AdController extends Controller
 
         return response()->json(['message' => 'click recorded']);
     }
+
+    public function update(Request $request, Ad $ad)
+    {
+        $user = $request->user();
+        if (!$user || !$user->hasRole('super_admin', 'moderator')) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $data = $request->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'category_id' => ['nullable', 'exists:categories,id'],
+            'image_url' => ['sometimes', 'required', 'string', 'max:2048'],
+            'link' => ['nullable', 'string', 'max:2048'],
+            'placement' => ['sometimes', 'required', 'string', 'max:50'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date'],
+            'status' => ['sometimes', 'required', 'string', 'max:50'],
+        ]);
+
+        $ad->update($data);
+
+        return response()->json($ad);
+    }
+
+    public function destroy(Request $request, Ad $ad)
+    {
+        $user = $request->user();
+        if (!$user || !$user->hasRole('super_admin', 'moderator')) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $ad->delete();
+
+        return response()->json(['message' => 'Ad deleted']);
+    }
 }

@@ -26,6 +26,7 @@ Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
+        Route::post('social', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'token']);
     });
 
     Route::get('categories', [CategoryController::class, 'index']);
@@ -52,6 +53,12 @@ Route::prefix('v1')->group(function () {
 
         Route::post('business', [BusinessController::class, 'store']);
         Route::put('business/{business}', [BusinessController::class, 'update']);
+        Route::post('business/{business}/like', [BusinessController::class, 'like']);
+        Route::delete('business/{business}/like', [BusinessController::class, 'unlike']);
+
+        // Ads management (admins/moderators)
+        Route::put('ads/{ad}', [AdController::class, 'update']);
+        Route::delete('ads/{ad}', [AdController::class, 'destroy']);
 
         Route::post('review', [ReviewController::class, 'store']);
 
