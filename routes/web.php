@@ -91,6 +91,7 @@ Route::prefix('admin')
             Route::post('/businesses/{business}/approve', [BusinessesController::class, 'approve'])->name('businesses.approve');
             Route::post('/businesses/{business}/reject', [BusinessesController::class, 'reject'])->name('businesses.reject');
             Route::post('/businesses/{business}/feature', [BusinessesController::class, 'feature'])->name('businesses.feature');
+            Route::delete('/businesses/{business}', [BusinessesController::class, 'destroy'])->name('businesses.destroy');
         });
         
         // Admin and Moderator only routes

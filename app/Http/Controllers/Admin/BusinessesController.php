@@ -360,6 +360,40 @@ class BusinessesController extends Controller
         return redirect()->back()->with('status', 'Business feature status updated.');
     }
 
+    public function destroy(Business $business)
+    {
+        // Delete gallery images files and records
+        if ($business->relationLoaded('images') === false) {
+            $business->load('images');
+        }
+
+        foreach ($business->images as $image) {
+            if (str_starts_with($image->image_url, '/storage/')) {
+                \Storage::disk('public')->delete(str_replace('/storage/', '', $image->image_url));
+            }
+            $image->delete();
+        }
+
+        // Delete payments
+        if ($business->relationLoaded('payments') === false) {
+            $business->load('payments');
+        }
+        $business->payments()->delete();
+
+        // Delete main and owner images if stored locally
+        if (!empty($business->image_url) && str_starts_with($business->image_url, '/storage/')) {
+            \Storage::disk('public')->delete(str_replace('/storage/', '', $business->image_url));
+        }
+
+        if (!empty($business->owner_image_url) && str_starts_with($business->owner_image_url, '/storage/')) {
+            \Storage::disk('public')->delete(str_replace('/storage/', '', $business->owner_image_url));
+        }
+
+        $business->delete();
+
+        return redirect()->route('admin.businesses.index')->with('status', 'Business deleted.');
+    }
+
     public function deleteGalleryImage($id)
     {
         $image = \App\Models\BusinessImage::findOrFail($id);

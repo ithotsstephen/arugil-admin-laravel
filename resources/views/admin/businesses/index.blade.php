@@ -83,6 +83,11 @@
                         @csrf
                         <button class="btn" type="submit">Toggle Featured</button>
                     </form>
+                    <form method="POST" action="{{ route('admin.businesses.destroy', $business) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this business? This action cannot be undone.');">
+                        @csrf
+                        @method('DELETE')
+                        <button class="btn" type="submit" style="background: #ef4444; color: #fff;">Delete</button>
+                    </form>
                 @endif
             </td>
         </tr>
