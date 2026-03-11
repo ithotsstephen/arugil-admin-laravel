@@ -277,6 +277,8 @@
         
         <label>Longitude</label>
         <input type="text" name="longitude" value="{{ old('longitude', $business->longitude) }}">
+
+        {{-- Geofence is managed from the Geo Fencing dashboard module. --}}
         
         <h3 style="margin: 24px 0 16px;">Social Media</h3>
         

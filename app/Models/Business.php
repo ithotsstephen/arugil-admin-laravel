@@ -36,6 +36,7 @@ class Business extends Model
         'address',
         'latitude',
         'longitude',
+        'geofence_radius',
         'image_url',
         'is_featured',
         'is_approved',
@@ -52,6 +53,7 @@ class Business extends Model
         'services' => 'array',
         'offers' => 'array',
         'keywords' => 'array',
+        'geofence_radius' => 'integer',
     ];
 
     public function owner(): BelongsTo

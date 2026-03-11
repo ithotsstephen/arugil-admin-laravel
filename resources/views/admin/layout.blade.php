@@ -67,6 +67,7 @@
                 <a href="{{ route('admin.ads.index') }}">Advertisements</a>
                 <a href="{{ route('admin.emergency.index') }}">Emergency</a>
                 <a href="{{ route('admin.reports.index') }}">Reports</a>
+                <a href="{{ route('admin.geofence.index') }}">Geo Fencing</a>
                 <a href="{{ route('admin.settings.index') }}">Settings</a>
             @endif
         </nav>

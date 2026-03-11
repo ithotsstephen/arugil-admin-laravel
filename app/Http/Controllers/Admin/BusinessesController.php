@@ -15,11 +15,37 @@ class BusinessesController extends Controller
         $businesses = Business::query()
             ->with(['category', 'owner'])
             ->when($request->filled('search'), function ($query) use ($request) {
-                $search = $request->string('search')->toString();
-                $query->where(function ($q) use ($search) {
-                    $q->where('whatsapp', 'like', '%' . $search . '%')
-                      ->orWhere('name', 'like', '%' . $search . '%')
-                      ->orWhere('phone', 'like', '%' . $search . '%');
+                $search = trim($request->string('search')->toString());
+                if ($search === '') {
+                    return;
+                }
+
+                $term = mb_strtolower($search, 'UTF-8');
+                $like = "%{$term}%";
+
+                $query->where(function ($q) use ($like) {
+                    $q->whereRaw('LOWER(COALESCE(whatsapp, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(name, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(phone, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(email, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(keywords::text, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(services::text, \'\')) LIKE ?', [$like]);
+
+                    $q->orWhereHas('category', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+
+                    $q->orWhereHas('city', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+
+                    $q->orWhereHas('district', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+
+                    $q->orWhereHas('area', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
                 });
             })
             ->when($request->filled('status'), function ($query) use ($request) {
@@ -136,6 +162,8 @@ class BusinessesController extends Controller
         $data['user_id'] = auth()->id();
         $data['is_approved'] = $request->boolean('is_approved', false);
         $data['expiry_date'] = $data['expiry_date'] ?? now()->addYear();
+        // Geofence is managed centrally; remove any per-business value
+        unset($data['geofence_radius']);
         unset($data['image_file']);
         unset($data['owner_image_file']);
 
@@ -293,6 +321,8 @@ class BusinessesController extends Controller
             $data['offers'] = $offers;
         }
 
+        // Geofence is managed centrally; remove any per-business value
+        unset($data['geofence_radius']);
         unset($data['image_file']);
         unset($data['owner_image_file']);
         $business->update($data);

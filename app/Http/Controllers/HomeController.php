@@ -27,12 +27,47 @@ class HomeController extends Controller
             ->when($request->filled('category'), fn ($query) => 
                 $query->where('category_id', $request->integer('category'))
             )
-            ->when($request->filled('search'), fn ($query) => 
-                $query->where('name', 'like', '%' . $request->string('search') . '%')
-            )
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim($request->string('search')->toString());
+                if ($search === '') {
+                    return;
+                }
+
+                $term = mb_strtolower($search, 'UTF-8');
+                $like = "%{$term}%";
+
+                $query->where(function ($q) use ($like) {
+                    $q->whereRaw('LOWER(name) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(description, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(address, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(owner_name, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(phone, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(email, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(keywords::text, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(services::text, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(offers::text, \'\')) LIKE ?', [$like]);
+
+                    $q->orWhereHas('category', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+
+                    $q->orWhereHas('city', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+
+                    $q->orWhereHas('district', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+
+                    $q->orWhereHas('area', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+                });
+            })
             ->orderByDesc('is_featured')
             ->orderByDesc('created_at')
-            ->paginate(12);
+            ->paginate(12)
+            ->withQueryString();
 
         return view('home.index', compact('businesses', 'categories'));
     }

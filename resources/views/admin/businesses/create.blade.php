@@ -195,6 +195,8 @@
         
         <label>Longitude</label>
         <input type="text" name="longitude" value="{{ old('longitude') }}">
+
+        {{-- Geofence moved to Geo Fencing module in the dashboard --}}
         
         <h3 style="margin: 24px 0 16px;">Social Media</h3>
         

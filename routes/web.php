@@ -119,5 +119,8 @@ Route::prefix('admin')
             Route::delete('/emergency/{emergency}', [EmergencyController::class, 'destroy'])->name('emergency.destroy');
             Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
             Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+            // Geo-fencing management (single global radius)
+            Route::get('/geofence', [\App\Http\Controllers\Admin\GeoFencingController::class, 'index'])->name('geofence.index');
+            Route::put('/geofence', [\App\Http\Controllers\Admin\GeoFencingController::class, 'update'])->name('geofence.update');
         });
     });

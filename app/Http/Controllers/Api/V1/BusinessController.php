@@ -35,7 +35,28 @@ class BusinessController extends Controller
                       ->orWhereRaw('LOWER(COALESCE(description, \'\')) LIKE ?', [$like])
                       ->orWhereRaw('LOWER(COALESCE(address, \'\')) LIKE ?', [$like])
                       ->orWhereRaw('LOWER(COALESCE(owner_name, \'\')) LIKE ?', [$like])
-                      ->orWhereRaw('LOWER(COALESCE(keywords::text, \'\')) LIKE ?', [$like]);
+                      ->orWhereRaw('LOWER(COALESCE(keywords::text, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(phone, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(email, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(services::text, \'\')) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(offers::text, \'\')) LIKE ?', [$like]);
+
+                    // Related models: category, city, district, area
+                    $q->orWhereHas('category', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+
+                    $q->orWhereHas('city', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+
+                    $q->orWhereHas('district', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
+
+                    $q->orWhereHas('area', function ($cq) use ($like) {
+                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    });
                 });
             })
             ->with(['category', 'owner'])
