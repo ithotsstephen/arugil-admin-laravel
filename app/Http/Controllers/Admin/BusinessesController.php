@@ -12,9 +12,10 @@ class BusinessesController extends Controller
 {
     public function index(Request $request)
     {
-        $businesses = Business::query()
-            ->with(['category', 'owner'])
-            ->when($request->filled('search'), function ($query) use ($request) {
+        $query = Business::query()->with(['category', 'owner']);
+
+        // free text search
+        $query->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim($request->string('search')->toString());
                 if ($search === '') {
                     return;
@@ -57,10 +58,41 @@ class BusinessesController extends Controller
                     $query->where('is_approved', false);
                 }
             })
-            ->orderByDesc('created_at')
-            ->paginate(20)->withQueryString();
+            ;
 
-        return view('admin.businesses.index', compact('businesses'));
+            // Sorting
+            $allowedSorts = [
+                'name' => 'businesses.name',
+                'category' => 'categories.name',
+                'owner' => 'users.name',
+                'is_approved' => 'businesses.is_approved',
+                'is_featured' => 'businesses.is_featured',
+                'expiry_date' => 'businesses.expiry_date',
+            ];
+
+            $sort = $request->string('sort')->toString();
+            $direction = strtolower($request->string('direction')->toString()) === 'asc' ? 'asc' : 'desc';
+
+            if (isset($allowedSorts[$sort])) {
+                // if sorting by related table, join the table
+                if ($sort === 'category') {
+                    $query->leftJoin('categories', 'categories.id', '=', 'businesses.category_id')
+                        ->select('businesses.*')
+                        ->orderBy($allowedSorts[$sort], $direction);
+                } elseif ($sort === 'owner') {
+                    $query->leftJoin('users', 'users.id', '=', 'businesses.user_id')
+                        ->select('businesses.*')
+                        ->orderBy($allowedSorts[$sort], $direction);
+                } else {
+                    $query->orderBy($allowedSorts[$sort], $direction);
+                }
+            } else {
+                $query->orderByDesc('created_at');
+            }
+
+            $businesses = $query->paginate(20)->withQueryString();
+
+            return view('admin.businesses.index', compact('businesses'));
     }
 
     public function create()
@@ -109,6 +141,12 @@ class BusinessesController extends Controller
             'payments.*.paid_at' => ['nullable', 'date'],
             'payments.*.description' => ['nullable', 'string'],
             'payments.*.transaction_id' => ['nullable', 'string', 'max:255'],
+            'products' => ['nullable', 'array', 'max:12'],
+            'products.*.name' => ['nullable', 'string', 'max:255'],
+            'products.*.image_file' => ['nullable', 'image', 'max:5120'],
+            'products.*.image_url' => ['nullable', 'url', 'max:2048'],
+            'products.*.price' => ['nullable', 'string', 'max:255'],
+            'products.*.description' => ['nullable', 'string'],
             'existing_payments' => ['nullable', 'array'],
             'existing_payments.*.id' => ['required', 'exists:business_payments,id'],
             'existing_payments.*.amount' => ['required', 'numeric', 'min:0'],
@@ -118,6 +156,12 @@ class BusinessesController extends Controller
             'delete_payments' => ['nullable', 'array'],
             'delete_payments.*' => ['required', 'exists:business_payments,id'],
             'keywords' => ['nullable', 'string', 'max:255'],
+            'products' => ['nullable', 'array', 'max:12'],
+            'products.*.name' => ['nullable', 'string', 'max:255'],
+            'products.*.image_file' => ['nullable', 'image', 'max:5120'],
+            'products.*.image_url' => ['nullable', 'url', 'max:2048'],
+            'products.*.price' => ['nullable', 'string', 'max:255'],
+            'products.*.description' => ['nullable', 'string'],
         ]);
 
         // Handle keywords: split by comma, trim, limit to 12
@@ -132,6 +176,7 @@ class BusinessesController extends Controller
         } else {
             $data['keywords'] = [];
         }
+
 
         // Handle hero image upload
         if ($request->hasFile('image_file')) {
@@ -169,6 +214,19 @@ class BusinessesController extends Controller
 
         $business = Business::create($data);
 
+        // Debug: log product payload in local environment to trace missing saves
+        if (app()->environment('local')) {
+            try {
+                \Log::error('Business store - products payload', [
+                    'products' => $request->input('products'),
+                    'files' => array_keys($request->allFiles()),
+                    'existing_products' => $request->input('existing_products'),
+                ]);
+            } catch (\Throwable $e) {
+                // ignore logging errors
+            }
+        }
+
         if ($request->has('payments')) {
             $payments = collect($request->input('payments'))
                 ->filter(function ($payment) {
@@ -187,6 +245,155 @@ class BusinessesController extends Controller
 
             if (!empty($payments)) {
                 $business->payments()->createMany($payments);
+            }
+        }
+
+        // Update existing products
+        if ($request->has('existing_products')) {
+            foreach ($request->input('existing_products') as $prodData) {
+                $prod = $business->products()->whereKey($prodData['id'])->first();
+                if (! $prod) continue;
+
+                $update = [];
+                $update['name'] = $prodData['name'] ?? $prod->name;
+                $update['price'] = $prodData['price'] ?? $prod->price;
+                $update['description'] = $prodData['description'] ?? $prod->description;
+
+                if (!empty($prodData['image_url'])) {
+                    $update['image_url'] = $prodData['image_url'];
+                }
+
+                $prod->update($update);
+            }
+        }
+
+        // Delete products if requested
+        if ($request->filled('delete_products')) {
+            $business->products()->whereIn('id', $request->input('delete_products'))->get()->each(function ($p) {
+                if (!empty($p->image_url) && str_starts_with($p->image_url, '/storage/')) {
+                    \Storage::disk('public')->delete(str_replace('/storage/', '', $p->image_url));
+                }
+                $p->delete();
+            });
+        }
+
+        // Handle new products and image uploads for existing ones
+        if ($request->has('products')) {
+            foreach ($request->input('products') as $index => $p) {
+                // if this is an existing product id, update image if uploaded
+                if (!empty($p['existing_id'])) {
+                    $prod = $business->products()->whereKey($p['existing_id'])->first();
+                    if ($prod) {
+                        if ($request->hasFile("products.{$index}.image_file")) {
+                            // delete old file
+                            if (!empty($prod->image_url) && str_starts_with($prod->image_url, '/storage/')) {
+                                \Storage::disk('public')->delete(str_replace('/storage/', '', $prod->image_url));
+                            }
+                            $path = $request->file("products.{$index}.image_file")->store('businesses/products', 'public');
+                            $prod->update(['image_url' => '/storage/' . $path]);
+                        }
+                        $prod->update([
+                            'name' => $p['name'] ?? $prod->name,
+                            'price' => $p['price'] ?? $prod->price,
+                            'description' => $p['description'] ?? $prod->description,
+                        ]);
+                    }
+                    continue;
+                }
+
+                if (empty($p['name']) && empty($p['price']) && empty($p['description']) && !$request->hasFile("products.{$index}.image_file")) {
+                    continue;
+                }
+
+                $imageUrl = null;
+                if ($request->hasFile("products.{$index}.image_file")) {
+                    $path = $request->file("products.{$index}.image_file")->store('businesses/products', 'public');
+                    $imageUrl = '/storage/' . $path;
+                } elseif (!empty($p['image_url'])) {
+                    $imageUrl = $p['image_url'];
+                }
+
+                $business->products()->create([
+                    'name' => $p['name'] ?? null,
+                    'price' => $p['price'] ?? null,
+                    'description' => $p['description'] ?? null,
+                    'image_url' => $imageUrl,
+                ]);
+            }
+        }
+
+        // Update existing products
+        if ($request->has('existing_products')) {
+            foreach ($request->input('existing_products') as $prodData) {
+                $prod = $business->products()->whereKey($prodData['id'])->first();
+                if (! $prod) continue;
+
+                $update = [];
+                $update['name'] = $prodData['name'] ?? $prod->name;
+                $update['price'] = $prodData['price'] ?? $prod->price;
+                $update['description'] = $prodData['description'] ?? $prod->description;
+
+                if (!empty($prodData['image_url'])) {
+                    $update['image_url'] = $prodData['image_url'];
+                }
+
+                // image file handled below via products uploads
+                $prod->update($update);
+            }
+        }
+
+        // Delete products if requested
+        if ($request->filled('delete_products')) {
+                $business->products()->whereIn('id', $request->input('delete_products'))->get()->each(function ($p) {
+                if (!empty($p->image_url) && str_starts_with($p->image_url, '/storage/')) {
+                    \Storage::disk('public')->delete(str_replace('/storage/', '', $p->image_url));
+                }
+                $p->delete();
+            });
+        }
+
+        // Handle new products and image uploads for existing ones
+        if ($request->has('products')) {
+            foreach ($request->input('products') as $index => $p) {
+                // if this is an existing product id, update image if uploaded
+                if (!empty($p['existing_id'])) {
+                    $prod = $business->products()->whereKey($p['existing_id'])->first();
+                    if ($prod) {
+                        if ($request->hasFile("products.{$index}.image_file")) {
+                            // delete old file
+                            if (!empty($prod->image_url) && str_starts_with($prod->image_url, '/storage/')) {
+                                \Storage::disk('public')->delete(str_replace('/storage/', '', $prod->image_url));
+                            }
+                            $path = $request->file("products.{$index}.image_file")->store('businesses/products', 'public');
+                            $prod->update(['image_url' => '/storage/' . $path]);
+                        }
+                        $prod->update([
+                            'name' => $p['name'] ?? $prod->name,
+                            'price' => $p['price'] ?? $prod->price,
+                            'description' => $p['description'] ?? $prod->description,
+                        ]);
+                    }
+                    continue;
+                }
+
+                if (empty($p['name']) && empty($p['price']) && empty($p['description']) && !$request->hasFile("products.{$index}.image_file")) {
+                    continue;
+                }
+
+                $imageUrl = null;
+                if ($request->hasFile("products.{$index}.image_file")) {
+                    $path = $request->file("products.{$index}.image_file")->store('businesses/products', 'public');
+                    $imageUrl = '/storage/' . $path;
+                } elseif (!empty($p['image_url'])) {
+                    $imageUrl = $p['image_url'];
+                }
+
+                $business->products()->create([
+                    'name' => $p['name'] ?? null,
+                    'price' => $p['price'] ?? null,
+                    'description' => $p['description'] ?? null,
+                    'image_url' => $imageUrl,
+                ]);
             }
         }
 

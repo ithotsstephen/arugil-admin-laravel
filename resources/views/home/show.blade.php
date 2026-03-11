@@ -534,6 +534,30 @@
                         </div>
                     </div>
                 @endif
+
+                @if(isset($business->products) && $business->products->count() > 0)
+                    <div class="section">
+                        <h3>Products</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 12px;">
+                            @foreach($business->products as $product)
+                                <div style="background: var(--bg); border: 1px solid var(--border); padding: 12px; border-radius: 8px;">
+                                    @if($product->image_url)
+                                        <div style="width:100%; height:140px; overflow:hidden; border-radius:6px; margin-bottom:8px;">
+                                            <img src="{{ $product->image_url }}" alt="{{ $product->name }}" style="width:100%; height:100%; object-fit:cover;">
+                                        </div>
+                                    @endif
+                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                                        <strong style="font-size:15px;">{{ $product->name }}</strong>
+                                        <span style="color:var(--primary); font-weight:600;">{{ config('app.currency', '₪') }}{{ number_format($product->price, 2) }}</span>
+                                    </div>
+                                    @if($product->description)
+                                        <p style="margin:8px 0 0; color:var(--text-muted); font-size:14px;">{{ Str::limit($product->description, 120) }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </div>
 
             <div>

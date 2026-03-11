@@ -253,6 +253,101 @@
         </div>
         <button type="button" class="btn" onclick="addOffer()" style="background: #10b981; margin-top: 8px;">+ Add Offer</button>
         
+        <h3 style="margin: 24px 0 16px;">Shopping / Products</h3>
+        <p class="muted" style="margin-top: -6px; margin-bottom: 12px; font-size: 12px;">Add up to 12 products for this business. Each product has one image, price and a short description.</p>
+
+        <div id="productsContainer">
+            @if($business->products && $business->products->count() > 0)
+                @foreach($business->products as $pIndex => $product)
+                    <div class="product-item" style="border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                            <h4 style="margin: 0; font-size: 14px; color: var(--text);">Product #{{ $pIndex + 1 }}</h4>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <label style="font-size:12px; color:var(--muted);">
+                                    <input type="checkbox" name="delete_products[]" value="{{ $product->id }}"> Delete
+                                </label>
+                                <button type="button" class="btn" onclick="removeProduct(this)" style="background: #ef4444; padding: 6px 12px; font-size: 12px;">✕</button>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="existing_products[{{ $pIndex }}][id]" value="{{ $product->id }}">
+                        <label>Product Name</label>
+                        <input type="text" name="existing_products[{{ $pIndex }}][name]" value="{{ old('existing_products.'.$pIndex.'.name', $product->name) }}">
+
+                        <label>Current Image</label>
+                        @if($product->image_url)
+                            <div style="margin-bottom: 8px;">
+                                <img src="{{ $product->image_url }}" alt="Product image" style="max-width: 160px; height: auto; border-radius: 6px;">
+                            </div>
+                        @endif
+
+                        <label>Replace Image</label>
+                        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 14px;">
+                            <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="products[{{ $pIndex }}][image_type]" value="upload" checked onchange="toggleProductImageInput({{ $pIndex }})">
+                                    <span>Upload</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="products[{{ $pIndex }}][image_type]" value="url" onchange="toggleProductImageInput({{ $pIndex }})">
+                                    <span>URL</span>
+                                </label>
+                            </div>
+                            <div id="product_{{ $pIndex }}_upload">
+                                <input type="file" name="products[{{ $pIndex }}][image_file]" accept="image/*" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+                                <input type="hidden" name="products[{{ $pIndex }}][existing_id]" value="{{ $product->id }}">
+                            </div>
+                            <div id="product_{{ $pIndex }}_url" style="display: none;">
+                                <input type="url" name="products[{{ $pIndex }}][image_url]" placeholder="https://example.com/product.jpg" value="{{ old('products.'.$pIndex.'.image_url') }}" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+                            </div>
+                        </div>
+
+                        <label>Price</label>
+                        <input type="text" name="existing_products[{{ $pIndex }}][price]" value="{{ old('existing_products.'.$pIndex.'.price', $product->price) }}" placeholder="e.g. 499.00 or $12">
+
+                        <label>Short Description</label>
+                        <textarea name="existing_products[{{ $pIndex }}][description]" rows="2">{{ old('existing_products.'.$pIndex.'.description', $product->description) }}</textarea>
+                    </div>
+                @endforeach
+            @else
+                <div class="product-item" style="border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                        <h4 style="margin: 0; font-size: 14px; color: var(--text);">Product #1</h4>
+                        <button type="button" class="btn" onclick="removeProduct(this)" style="background: #ef4444; padding: 6px 12px; font-size: 12px;">✕</button>
+                    </div>
+                    <label>Product Name</label>
+                    <input type="text" name="products[0][name]" placeholder="Product name">
+
+                    <label>Product Image</label>
+                    <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 14px;">
+                        <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="products[0][image_type]" value="upload" checked onchange="toggleProductImageInput(0)">
+                                <span>Upload</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="products[0][image_type]" value="url" onchange="toggleProductImageInput(0)">
+                                <span>URL</span>
+                            </label>
+                        </div>
+                        <div id="product_0_upload">
+                            <input type="file" name="products[0][image_file]" accept="image/*" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+                        </div>
+                        <div id="product_0_url" style="display: none;">
+                            <input type="url" name="products[0][image_url]" placeholder="https://example.com/product.jpg" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+                        </div>
+                    </div>
+
+                    <label>Price</label>
+                    <input type="text" name="products[0][price]" placeholder="e.g. 499.00 or $12">
+
+                    <label>Short Description</label>
+                    <textarea name="products[0][description]" rows="2" placeholder="Short description (max 255 chars)"></textarea>
+                </div>
+            @endif
+        </div>
+        <button type="button" class="btn" onclick="addProduct()" style="background: #10b981; margin-top: 8px;">+ Add Product</button>
+        
         <h3 style="margin: 24px 0 16px;">Contact Details</h3>
         
         <label>Phone</label>
@@ -444,6 +539,7 @@ let serviceIndex = {{ $business->services ? count($business->services) : 1 }};
 let offerIndex = {{ $business->offers ? count($business->offers) : 1 }};
 let galleryIndex = 1;
 let paymentIndex = 1;
+let productIndex = {{ $business->products ? $business->products->count() : 1 }};
 
 function toggleImageInput(type) {
     const uploadInput = document.getElementById(type + '_upload_input');
@@ -581,6 +677,68 @@ function removeOffer(btn) {
     if (container.children.length > 0) {
         btn.closest('.offer-item').remove();
     }
+}
+
+function toggleProductImageInput(index) {
+    const uploadInput = document.getElementById('product_' + index + '_upload');
+    const urlInput = document.getElementById('product_' + index + '_url');
+    const radio = document.querySelector('input[name="products[' + index + '][image_type]"]:checked')?.value;
+
+    if (radio === 'upload' || !radio) {
+        if (uploadInput) uploadInput.style.display = 'block';
+        if (urlInput) urlInput.style.display = 'none';
+    } else {
+        if (uploadInput) uploadInput.style.display = 'none';
+        if (urlInput) urlInput.style.display = 'block';
+    }
+}
+
+function addProduct() {
+    const container = document.getElementById('productsContainer');
+    const idx = productIndex;
+    const newItem = document.createElement('div');
+    newItem.className = 'product-item';
+    newItem.style.cssText = 'border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 12px;';
+    newItem.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 14px; color: var(--text);">Product #${idx + 1}</h4>
+            <button type="button" class="btn" onclick="removeProduct(this)" style="background: #ef4444; padding: 6px 12px; font-size: 12px;">✕</button>
+        </div>
+        <label>Product Name</label>
+        <input type="text" name="products[${idx}][name]" placeholder="Product name">
+
+        <label>Product Image</label>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 14px;">
+            <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="products[${idx}][image_type]" value="upload" checked onchange="toggleProductImageInput(${idx})">
+                    <span>Upload</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="products[${idx}][image_type]" value="url" onchange="toggleProductImageInput(${idx})">
+                    <span>URL</span>
+                </label>
+            </div>
+            <div id="product_${idx}_upload">
+                <input type="file" name="products[${idx}][image_file]" accept="image/*" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+            </div>
+            <div id="product_${idx}_url" style="display: none;">
+                <input type="url" name="products[${idx}][image_url]" placeholder="https://example.com/product.jpg" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+            </div>
+        </div>
+
+        <label>Price</label>
+        <input type="text" name="products[${idx}][price]" placeholder="e.g. 499.00 or $12">
+
+        <label>Short Description</label>
+        <textarea name="products[${idx}][description]" rows="2" placeholder="Short description (max 255 chars)"></textarea>
+    `;
+    container.appendChild(newItem);
+    productIndex++;
+}
+
+function removeProduct(btn) {
+    btn.closest('.product-item').remove();
 }
 
 function addGalleryImage() {

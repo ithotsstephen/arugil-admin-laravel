@@ -59,13 +59,23 @@ class AdsController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'category_id' => ['nullable', 'exists:categories,id'],
-            'image_url' => ['required', 'string', 'max:2048'],
+            'image_url' => ['sometimes', 'nullable', 'string', 'max:2048'],
+            'image_file' => ['sometimes', 'nullable', 'image', 'max:5120'],
             'link' => ['nullable', 'string', 'max:2048'],
             'placement' => ['required', 'string', 'max:50'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
             'status' => ['required', 'string', 'max:50'],
         ]);
+
+        if ($request->hasFile('image_file')) {
+            $path = $request->file('image_file')->store('ads', 'public');
+            $data['image_url'] = '/storage/' . $path;
+        }
+
+        if (empty($data['image_url'])) {
+            return redirect()->back()->withErrors(['image_url' => 'Please provide an image URL or upload an image.'])->withInput();
+        }
 
         Ad::create($data);
 
@@ -90,13 +100,23 @@ class AdsController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'category_id' => ['nullable', 'exists:categories,id'],
-            'image_url' => ['required', 'string', 'max:2048'],
+            'image_url' => ['sometimes', 'nullable', 'string', 'max:2048'],
+            'image_file' => ['sometimes', 'nullable', 'image', 'max:5120'],
             'link' => ['nullable', 'string', 'max:2048'],
             'placement' => ['required', 'string', 'max:50'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
             'status' => ['required', 'string', 'max:50'],
         ]);
+
+        if ($request->hasFile('image_file')) {
+            $path = $request->file('image_file')->store('ads', 'public');
+            $data['image_url'] = '/storage/' . $path;
+        }
+
+        if (empty($data['image_url'])) {
+            return redirect()->back()->withErrors(['image_url' => 'Please provide an image URL or upload an image.'])->withInput();
+        }
 
         $ad->update($data);
 

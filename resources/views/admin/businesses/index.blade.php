@@ -37,12 +37,17 @@
 <table>
     <thead>
     <tr>
-        <th>Business</th>
-        <th>Category</th>
-        <th>Owner</th>
-        <th>Status</th>
-        <th>Featured</th>
-        <th>Expiry</th>
+        @php
+            $currentSort = request('sort');
+            $currentDir = request('direction', 'desc');
+            $toggle = fn($key) => ($currentSort === $key && $currentDir === 'asc') ? 'desc' : 'asc';
+        @endphp
+        <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'name', 'direction' => $toggle('name')])) }}">Business @if($currentSort=='name') ({{ strtoupper($currentDir) }}) @endif</a></th>
+        <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'category', 'direction' => $toggle('category')])) }}">Category @if($currentSort=='category') ({{ strtoupper($currentDir) }}) @endif</a></th>
+        <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'owner', 'direction' => $toggle('owner')])) }}">Owner @if($currentSort=='owner') ({{ strtoupper($currentDir) }}) @endif</a></th>
+        <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'is_approved', 'direction' => $toggle('is_approved')])) }}">Status @if($currentSort=='is_approved') ({{ strtoupper($currentDir) }}) @endif</a></th>
+        <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'is_featured', 'direction' => $toggle('is_featured')])) }}">Featured @if($currentSort=='is_featured') ({{ strtoupper($currentDir) }}) @endif</a></th>
+        <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'expiry_date', 'direction' => $toggle('expiry_date')])) }}">Expiry @if($currentSort=='expiry_date') ({{ strtoupper($currentDir) }}) @endif</a></th>
         <th>Actions</th>
     </tr>
     </thead>
