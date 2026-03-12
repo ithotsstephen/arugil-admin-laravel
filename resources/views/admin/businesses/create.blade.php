@@ -10,8 +10,12 @@
 
 <form method="POST" action="{{ route('admin.businesses.store') }}" enctype="multipart/form-data">
     @csrf
+    <input type="hidden" id="business_id" name="business_id" value="">
     <div class="card" style="max-width: 900px;">
-        <h3 style="margin-bottom: 16px;">Basic Information</h3>
+        <h3 data-section="basic" style="margin-bottom: 16px;">Basic Information
+            <button type="button" class="btn" onclick="saveSection('basic')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-basic" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         
         <label>Business Name*</label>
         <input type="text" name="name" required value="{{ old('name') }}">
@@ -29,7 +33,12 @@
             @endforeach
         </select>
 
-        <h3 style="margin: 24px 0 16px;">Location</h3>
+        
+
+        <h3 data-section="location" style="margin: 24px 0 16px;">Location
+            <button type="button" class="btn" onclick="saveSection('location')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-location" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         
         <label>State</label>
         <select name="state_id" id="state_select" onchange="loadCities()">
@@ -60,11 +69,23 @@
         <label>Pincode</label>
         <input type="text" id="pincode_display" placeholder="Pincode" readonly>
 
+        <label>Address</label>
+        <input type="text" name="address" value="{{ old('address') }}">
+
+        <label>Latitude</label>
+        <input type="text" name="latitude" value="{{ old('latitude') }}">
+
+        <label>Longitude</label>
+        <input type="text" name="longitude" value="{{ old('longitude') }}">
+
             <label>Keywords <span style="font-size:12px; color:#888;">(up to 12, separated by commas)</span></label>
             <input type="text" name="keywords" value="{{ old('keywords') }}" placeholder="e.g. restaurant, cafe, pizza, delivery" maxlength="255">
             <p class="muted" style="font-size:12px; margin-bottom:16px;">Enter up to 12 keywords separated by commas. Example: pizza, pasta, Italian, delivery</p>
         
-        <h3 style="margin: 24px 0 16px;">Business Details</h3>
+        <h3 data-section="details" style="margin: 24px 0 16px;">Business Details
+            <button type="button" class="btn" onclick="saveSection('details')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-details" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         
         <label>Owner Name</label>
         <input type="text" name="owner_name" value="{{ old('owner_name') }}" placeholder="Enter owner's name">
@@ -130,7 +151,10 @@
         </div>
         <button type="button" class="btn" onclick="addService()" style="background: #10b981; margin-top: 8px;">+ Add Service</button>
         
-        <h3 style="margin: 24px 0 16px;">Special Offers</h3>
+        <h3 data-section="details" style="margin: 24px 0 16px;">Special Offers
+            <button type="button" class="btn" onclick="saveSection('details')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-details-offers" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         
         <div id="offersContainer">
             <div class="offer-item" style="border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 12px;">
@@ -171,7 +195,10 @@
         </div>
         <button type="button" class="btn" onclick="addOffer()" style="background: #10b981; margin-top: 8px;">+ Add Offer</button>
         
-        <h3 style="margin: 24px 0 16px;">Shopping / Products</h3>
+        <h3 data-section="products" style="margin: 24px 0 16px;">Shopping / Products
+            <button type="button" class="btn" onclick="saveSection('products')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-products" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         <p class="muted" style="margin-top: -6px; margin-bottom: 12px; font-size: 12px;">Add up to 12 products for this business. Each product has one image, price and a short description.</p>
 
         <div id="productsContainer">
@@ -212,7 +239,10 @@
         </div>
         <button type="button" class="btn" onclick="addProduct()" style="background: #10b981; margin-top: 8px;">+ Add Product</button>
         
-        <h3 style="margin: 24px 0 16px;">Contact Details</h3>
+        <h3 data-section="contact" style="margin: 24px 0 16px;">Contact Details
+            <button type="button" class="btn" onclick="saveSection('contact')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-contact" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         
         <label>Phone</label>
         <input type="text" name="phone" value="{{ old('phone') }}">
@@ -226,20 +256,14 @@
         <label>Website</label>
         <input type="url" name="website" value="{{ old('website') }}">
         
-        <h3 style="margin: 24px 0 16px;">Location</h3>
         
-        <label>Address</label>
-        <input type="text" name="address" value="{{ old('address') }}">
-        
-        <label>Latitude</label>
-        <input type="text" name="latitude" value="{{ old('latitude') }}">
-        
-        <label>Longitude</label>
-        <input type="text" name="longitude" value="{{ old('longitude') }}">
 
         {{-- Geofence moved to Geo Fencing module in the dashboard --}}
         
-        <h3 style="margin: 24px 0 16px;">Social Media</h3>
+        <h3 data-section="social" style="margin: 24px 0 16px;">Social Media
+            <button type="button" class="btn" onclick="saveSection('social')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-social" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         
         <label>Facebook</label>
         <input type="url" name="facebook" value="{{ old('facebook') }}">
@@ -253,7 +277,10 @@
         <label>LinkedIn</label>
         <input type="url" name="linkedin" value="{{ old('linkedin') }}">
         
-        <h3 style="margin: 24px 0 16px;">Photo Gallery</h3>
+        <h3 data-section="media" style="margin: 24px 0 16px;">Photo Gallery
+            <button type="button" class="btn" onclick="saveSection('media')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-media" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         
         <div id="galleryContainer">
             <div class="gallery-item" style="border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 12px;">
@@ -283,7 +310,10 @@
         </div>
         <button type="button" class="btn" onclick="addGalleryImage()" style="background: #10b981; margin-top: 8px;">+ Add Gallery Image</button>
 
-        <h3 style="margin: 24px 0 16px;">Payments</h3>
+        <h3 data-section="payments" style="margin: 24px 0 16px;">Payments
+            <button type="button" class="btn" onclick="saveSection('payments')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-payments" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         <p class="muted" style="margin-top: -6px; margin-bottom: 12px; font-size: 12px;">Record payments made by the business (currency: ₹ INR).</p>
 
         <div id="paymentsContainer">
@@ -310,7 +340,10 @@
         </div>
         <button type="button" class="btn" onclick="addPayment()" style="background: #10b981; margin-top: 8px;">+ Add Payment</button>
         
-        <h3 style="margin: 24px 0 16px;">Status</h3>
+        <h3 data-section="status" style="margin: 24px 0 16px;">Status
+            <button type="button" class="btn" onclick="saveSection('status')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
+            <span id="save-status-status" style="margin-left:8px; font-size:13px; color:#666;"></span>
+        </h3>
         
         <label>Expiry Date</label>
         <input type="date" name="expiry_date" value="{{ old('expiry_date', now()->addYear()->format('Y-m-d')) }}">
@@ -686,6 +719,75 @@ function setPincodeFromArea() {
     const pincodeInput = document.getElementById('pincode_display');
     const selectedOption = areaSelect.options[areaSelect.selectedIndex];
     pincodeInput.value = selectedOption?.dataset?.pincode || '';
+}
+
+// Save a single section via AJAX. Collects inputs between the section header and the next header.
+async function saveSection(section) {
+    const token = document.querySelector('input[name="_token"]').value;
+    const businessIdInput = document.getElementById('business_id');
+    const statusEl = document.getElementById('save-status-' + section) || null;
+
+    if (statusEl) statusEl.textContent = 'Saving...';
+
+    const h = document.querySelector('h3[data-section="' + section + '"]');
+    if (!h) {
+        if (statusEl) statusEl.textContent = 'Section not found';
+        return;
+    }
+
+    // collect elements until next h3
+    const inputs = [];
+    let node = h.nextElementSibling;
+    while (node && node.tagName !== 'H3') {
+        inputs.push(node);
+        node = node.nextElementSibling;
+    }
+
+    const formData = new FormData();
+    formData.append('_token', token);
+    formData.append('section', section);
+    if (businessIdInput && businessIdInput.value) {
+        formData.append('business_id', businessIdInput.value);
+    }
+
+    inputs.forEach(container => {
+        // find form controls inside
+        container.querySelectorAll('input, select, textarea').forEach(el => {
+            if (!el.name) return;
+            if (el.type === 'file') {
+                if (el.files && el.files.length) {
+                    // For multiple files, append first file per field
+                    formData.append(el.name, el.files[0]);
+                }
+            } else if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) {
+                // skip unchecked
+                return;
+            } else {
+                formData.append(el.name, el.value);
+            }
+        });
+    });
+
+    try {
+        const resp = await fetch("{{ route('admin.businesses.partial.save') }}", {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        });
+
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+            if (statusEl) statusEl.textContent = data.message || 'Save failed';
+            return;
+        }
+
+        if (businessIdInput) businessIdInput.value = data.business_id;
+        if (statusEl) statusEl.textContent = 'Saved';
+        setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2500);
+    } catch (e) {
+        if (statusEl) statusEl.textContent = 'Save error';
+        console.error(e);
+    }
 }
 </script>
 @endsection

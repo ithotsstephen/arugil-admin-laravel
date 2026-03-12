@@ -79,6 +79,7 @@ Route::prefix('admin')
         // Business routes - accessible by managers too
         Route::get('/businesses', [BusinessesController::class, 'index'])->name('businesses.index');
         Route::get('/businesses/create', [BusinessesController::class, 'create'])->name('businesses.create');
+        Route::post('/businesses/partial', [BusinessesController::class, 'partialSave'])->name('businesses.partial.save');
         Route::post('/businesses', [BusinessesController::class, 'store'])->name('businesses.store');
         Route::get('/businesses/{business}/edit', [BusinessesController::class, 'edit'])->name('businesses.edit');
         Route::put('/businesses/{business}', [BusinessesController::class, 'update'])->name('businesses.update');

@@ -76,10 +76,14 @@
             <td class="actions">
                 <a href="{{ route('admin.businesses.edit', $business) }}" class="btn">Edit</a>
                 @if(auth()->user()->hasRole('super_admin', 'moderator'))
-                    <form method="POST" action="{{ route('admin.businesses.approve', $business) }}" style="display: inline;">
-                        @csrf
-                        <button class="btn btn-primary" type="submit">Approve</button>
-                    </form>
+                    @if($business->is_approved)
+                        <button class="btn" type="button" disabled style="background:#10b981; color:#fff;">Approved</button>
+                    @else
+                        <form method="POST" action="{{ route('admin.businesses.approve', $business) }}" style="display: inline;">
+                            @csrf
+                            <button class="btn btn-primary" type="submit">Approve</button>
+                        </form>
+                    @endif
                     <form method="POST" action="{{ route('admin.businesses.reject', $business) }}" style="display: inline;">
                         @csrf
                         <button class="btn" type="submit">Reject</button>

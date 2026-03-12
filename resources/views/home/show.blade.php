@@ -548,7 +548,7 @@
                                     @endif
                                     <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                                         <strong style="font-size:15px;">{{ $product->name }}</strong>
-                                        <span style="color:var(--primary); font-weight:600;">{{ config('app.currency', '₪') }}{{ number_format($product->price, 2) }}</span>
+                                        <span style="color:var(--primary); font-weight:600;">{{ config('app.currency', '₪') }}{{ number_format((float) ($product->price ?? 0), 2) }}</span>
                                     </div>
                                     @if($product->description)
                                         <p style="margin:8px 0 0; color:var(--text-muted); font-size:14px;">{{ Str::limit($product->description, 120) }}</p>

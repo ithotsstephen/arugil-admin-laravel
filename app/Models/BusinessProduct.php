@@ -17,6 +17,10 @@ class BusinessProduct extends Model
         'description',
     ];
 
+    protected $casts = [
+        'price' => 'float',
+    ];
+
     public function business()
     {
         return $this->belongsTo(Business::class);

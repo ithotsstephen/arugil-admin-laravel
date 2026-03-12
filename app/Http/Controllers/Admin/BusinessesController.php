@@ -103,6 +103,142 @@ class BusinessesController extends Controller
         return view('admin.businesses.create', compact('categories', 'states', 'areas'));
     }
 
+    /**
+     * Save a partial section of the business form via AJAX.
+     * Returns the business id so the UI can continue updating the same draft.
+     */
+    public function partialSave(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $section = $request->input('section');
+        $businessId = $request->input('business_id');
+
+        $map = [
+            'basic' => ['name', 'category_id', 'keywords', 'about_title', 'description', 'years_of_business'],
+            'location' => ['state_id', 'city_id', 'district_id', 'area_id', 'address', 'latitude', 'longitude'],
+            'contact' => ['phone', 'whatsapp', 'email', 'website'],
+            'social' => ['facebook', 'instagram', 'twitter', 'linkedin'],
+            'media' => ['image_url', 'owner_image_url'],
+            'products' => ['products'],
+            'payments' => ['payments'],
+            'details' => ['services', 'offers'],
+            'status' => ['expiry_date', 'is_approved'],
+        ];
+
+        if (!isset($map[$section])) {
+            return response()->json(['success' => false, 'message' => 'Unknown section'], 400);
+        }
+
+        $allowed = $map[$section];
+        $fields = [];
+
+        foreach ($allowed as $key) {
+            if ($request->has($key)) {
+                $fields[$key] = $request->input($key);
+            }
+        }
+
+        // special handling: keywords -> array
+        if (isset($fields['keywords']) && is_string($fields['keywords'])) {
+            $keywords = collect(explode(',', $fields['keywords']))->map(fn($k) => trim($k))->filter()->take(12)->values()->all();
+            $fields['keywords'] = $keywords;
+        }
+
+        // handle common file uploads for media section
+        if ($request->hasFile('image_file')) {
+            $path = $request->file('image_file')->store('businesses', 'public');
+            $fields['image_url'] = '/storage/' . $path;
+        }
+
+        if ($request->hasFile('owner_image_file')) {
+            $path = $request->file('owner_image_file')->store('businesses/owners', 'public');
+            $fields['owner_image_url'] = '/storage/' . $path;
+        }
+
+        $fields['user_id'] = auth()->id();
+
+        try {
+            if ($businessId) {
+                $business = Business::find($businessId);
+                if (! $business) {
+                    return response()->json(['success' => false, 'message' => 'Business not found'], 404);
+                }
+                $business->update($fields);
+            } else {
+                // Ensure required non-null fields have safe defaults for draft creation (DB may enforce NOT NULL)
+                if (empty($fields['category_id'])) {
+                    $firstCategoryId = \App\Models\Category::orderBy('id')->value('id');
+                    if ($firstCategoryId) {
+                        $fields['category_id'] = $firstCategoryId;
+                    } else {
+                        // As a last resort, use 1 to avoid DB constraint; caller should correct later
+                        $fields['category_id'] = 1;
+                    }
+                }
+
+                // Ensure required non-null columns have safe defaults for drafts
+                if (empty($fields['name'])) {
+                    $fields['name'] = 'Untitled Business - ' . now()->format('Y-m-d H:i:s');
+                }
+
+                // Provide minimal required values where necessary
+                $business = Business::create($fields);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Partial save failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Save failed: ' . $e->getMessage()], 500);
+        }
+
+        // If products were submitted in this partial save, persist them to products table
+        if ($request->has('products')) {
+            foreach ($request->input('products') as $index => $p) {
+                // update existing
+                if (!empty($p['existing_id'])) {
+                    $prod = $business->products()->whereKey($p['existing_id'])->first();
+                    if ($prod) {
+                        // handle uploaded image for existing product
+                        if ($request->hasFile("products.{$index}.image_file")) {
+                            if (!empty($prod->image_url) && str_starts_with($prod->image_url, '/storage/')) {
+                                \Storage::disk('public')->delete(str_replace('/storage/', '', $prod->image_url));
+                            }
+                            $path = $request->file("products.{$index}.image_file")->store('businesses/products', 'public');
+                            $prod->image_url = '/storage/' . $path;
+                        } elseif (!empty($p['image_url'])) {
+                            $prod->image_url = $p['image_url'];
+                        }
+
+                        $prod->name = $p['name'] ?? $prod->name;
+                        $prod->price = $p['price'] ?? $prod->price;
+                        $prod->description = $p['description'] ?? $prod->description;
+                        $prod->save();
+                    }
+                    continue;
+                }
+
+                // skip empty entries
+                if (empty($p['name']) && empty($p['price']) && empty($p['description']) && !$request->hasFile("products.{$index}.image_file")) {
+                    continue;
+                }
+
+                $imageUrl = null;
+                if ($request->hasFile("products.{$index}.image_file")) {
+                    $path = $request->file("products.{$index}.image_file")->store('businesses/products', 'public');
+                    $imageUrl = '/storage/' . $path;
+                } elseif (!empty($p['image_url'])) {
+                    $imageUrl = $p['image_url'];
+                }
+
+                $business->products()->create([
+                    'name' => $p['name'] ?? null,
+                    'price' => $p['price'] ?? null,
+                    'description' => $p['description'] ?? null,
+                    'image_url' => $imageUrl,
+                ]);
+            }
+        }
+
+        return response()->json(['success' => true, 'business_id' => $business->id, 'message' => 'Section saved']);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

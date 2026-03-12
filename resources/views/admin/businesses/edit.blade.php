@@ -443,7 +443,7 @@
                         <div class="payment-row" style="border: 1px dashed var(--border); padding: 12px; border-radius: 8px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
                                 <div>
-                                    <strong>₹{{ number_format($payment->amount, 2) }}</strong>
+                                    <strong>₹{{ number_format((float) ($payment->amount ?? 0), 2) }}</strong>
                                     <span class="muted" style="margin-left: 8px; font-size: 12px;">{{ $payment->paid_at?->format('Y-m-d') }}</span>
                                     <span class="muted" style="margin-left: 8px; font-size: 12px;">{{ $payment->transaction_id ?? '—' }}</span>
                                 </div>

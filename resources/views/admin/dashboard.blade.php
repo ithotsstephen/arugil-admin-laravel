@@ -57,9 +57,9 @@
     </div>
     <div class="card">
         <h3>Revenue Summary</h3>
-        <p>₹{{ number_format($revenueSummary['monthly'], 2) }} this month</p>
-        <p style="font-size: 16px; font-weight: 500;">₹{{ number_format($revenueSummary['ytd'], 2) }} YTD</p>
-        <p style="font-size: 14px; color: var(--muted); margin-top: 6px;">₹{{ number_format($revenueSummary['total'], 2) }} total</p>
+        <p>₹{{ number_format((float) ($revenueSummary['monthly'] ?? 0), 2) }} this month</p>
+        <p style="font-size: 16px; font-weight: 500;">₹{{ number_format((float) ($revenueSummary['ytd'] ?? 0), 2) }} YTD</p>
+        <p style="font-size: 14px; color: var(--muted); margin-top: 6px;">₹{{ number_format((float) ($revenueSummary['total'] ?? 0), 2) }} total</p>
     </div>
 </div>
 
@@ -77,7 +77,7 @@
             @foreach($paymentMonths as $month => $total)
                 <tr>
                     <td>{{ $month }}</td>
-                    <td>₹{{ number_format($total, 2) }}</td>
+                    <td>₹{{ number_format((float) ($total ?? 0), 2) }}</td>
                 </tr>
             @endforeach
             </tbody>
@@ -98,7 +98,7 @@
             @forelse($payments as $payment)
                 <tr>
                     <td>{{ $payment->business?->name ?? 'N/A' }}</td>
-                    <td>₹{{ number_format($payment->amount, 2) }}</td>
+                    <td>₹{{ number_format((float) ($payment->amount ?? 0), 2) }}</td>
                     <td>{{ $payment->paid_at?->format('Y-m-d') }}</td>
                     <td>{{ $payment->transaction_id ?? '—' }}</td>
                 </tr>
