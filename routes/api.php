@@ -38,6 +38,8 @@ Route::prefix('v1')->group(function () {
     Route::get('nearby', [BusinessController::class, 'nearby']);
 
     Route::get('business/{business}/reviews', [ReviewController::class, 'index']);
+    Route::get('business/{business}/products', [\App\Http\Controllers\Api\V1\ProductController::class, 'index']);
+    Route::get('business/{business}/products/{product}', [\App\Http\Controllers\Api\V1\ProductController::class, 'show']);
     Route::get('jobs', [JobController::class, 'index']);
     Route::get('ads', [AdController::class, 'index']);
     Route::post('ads/{ad}/click', [AdController::class, 'click']);
@@ -53,6 +55,9 @@ Route::prefix('v1')->group(function () {
 
         Route::post('business', [BusinessController::class, 'store']);
         Route::put('business/{business}', [BusinessController::class, 'update']);
+        Route::post('business/{business}/products', [\App\Http\Controllers\Api\V1\ProductController::class, 'store']);
+        Route::put('business/{business}/products/{product}', [\App\Http\Controllers\Api\V1\ProductController::class, 'update']);
+        Route::delete('business/{business}/products/{product}', [\App\Http\Controllers\Api\V1\ProductController::class, 'destroy']);
         Route::post('business/{business}/like', [BusinessController::class, 'like']);
         Route::delete('business/{business}/like', [BusinessController::class, 'unlike']);
 

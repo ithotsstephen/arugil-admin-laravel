@@ -73,7 +73,7 @@ class BusinessController extends Controller
         }
 
         $business->increment('views');
-        $business->load(['category', 'owner', 'images', 'reviews']);
+        $business->load(['category', 'owner', 'images', 'reviews', 'products']);
         $business->loadCount('likes');
 
         $user = $request->user();
