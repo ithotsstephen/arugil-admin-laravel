@@ -47,6 +47,7 @@
         <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'owner', 'direction' => $toggle('owner')])) }}">Owner @if($currentSort=='owner') ({{ strtoupper($currentDir) }}) @endif</a></th>
         <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'is_approved', 'direction' => $toggle('is_approved')])) }}">Status @if($currentSort=='is_approved') ({{ strtoupper($currentDir) }}) @endif</a></th>
         <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'is_featured', 'direction' => $toggle('is_featured')])) }}">Featured @if($currentSort=='is_featured') ({{ strtoupper($currentDir) }}) @endif</a></th>
+        <th>WhatsApp</th>
         <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'expiry_date', 'direction' => $toggle('expiry_date')])) }}">Expiry @if($currentSort=='expiry_date') ({{ strtoupper($currentDir) }}) @endif</a></th>
         <th>Actions</th>
     </tr>
@@ -60,6 +61,7 @@
             <td>
                 <span class="badge">{{ $business->is_approved ? 'Approved' : 'Pending' }}</span>
             </td>
+            <td>{{ $business->whatsapp ?? '—' }}</td>
             <td>
                 <span class="badge">{{ $business->is_featured ? 'Yes' : 'No' }}</span>
             </td>
@@ -102,7 +104,7 @@
         </tr>
     @empty
         <tr>
-            <td colspan="7">No businesses found.</td>
+            <td colspan="8">No businesses found.</td>
         </tr>
     @endforelse
     </tbody>
