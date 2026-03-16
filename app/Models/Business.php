@@ -18,7 +18,6 @@ class Business extends Model
         'state_id',
         'city_id',
         'district_id',
-        'pincode',
         'area_id',
         'name',
         'description',
@@ -37,13 +36,13 @@ class Business extends Model
         'address',
         'latitude',
         'longitude',
-        'phone', 'whatsapp', 'email', 'website', 'facebook', 'instagram', 'twitter', 'linkedin', 'pincode_id'
-    protected $casts = [
+        'image_url',
+        'owner_image_url',
+        'pincode',
+        'pincode_id',
+    ];
 
-    public function pincode()
-    {
-        return $this->belongsTo(\App\Models\Pincode::class);
-    }
+    protected $casts = [
         'is_featured' => 'boolean',
         'is_approved' => 'boolean',
         'latitude' => 'float',
@@ -54,6 +53,11 @@ class Business extends Model
         'keywords' => 'array',
         'geofence_radius' => 'integer',
     ];
+
+    public function pincode()
+    {
+        return $this->belongsTo(\App\Models\Pincode::class);
+    }
 
     public function owner(): BelongsTo
     {

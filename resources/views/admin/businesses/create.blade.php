@@ -139,8 +139,7 @@
             </div>
         </div>
         
-        <label>Years of Business</label>
-        <input type="number" name="years_of_business" value="{{ old('years_of_business') }}" placeholder="Enter years in business" min="0" max="150">
+        <!-- Years of Business input present above in two-column 'Business Details' section; duplicate removed -->
         
         <label>Hero Image</label>
         <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 14px;">
@@ -301,17 +300,24 @@
             <span id="save-status-social" style="margin-left:8px; font-size:13px; color:#666;"></span>
         </h3>
         
-        <label>Facebook</label>
-        <input type="url" name="facebook" value="{{ old('facebook') }}">
-        
-        <label>Instagram</label>
-        <input type="url" name="instagram" value="{{ old('instagram') }}">
-        
-        <label>Twitter</label>
-        <input type="url" name="twitter" value="{{ old('twitter') }}">
-        
-        <label>LinkedIn</label>
-        <input type="url" name="linkedin" value="{{ old('linkedin') }}">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+            <div>
+                <label>Facebook</label>
+                <input type="url" name="facebook" value="{{ old('facebook') }}">
+            </div>
+            <div>
+                <label>Instagram</label>
+                <input type="url" name="instagram" value="{{ old('instagram') }}">
+            </div>
+            <div>
+                <label>Twitter</label>
+                <input type="url" name="twitter" value="{{ old('twitter') }}">
+            </div>
+            <div>
+                <label>LinkedIn</label>
+                <input type="url" name="linkedin" value="{{ old('linkedin') }}">
+            </div>
+        </div>
         
         <h3 data-section="media" style="margin: 24px 0 16px;">Photo Gallery
             <button type="button" class="btn" onclick="saveSection('media')" style="float:right; background:#2563eb; color:white; padding:6px 10px; font-size:13px;">Save</button>
