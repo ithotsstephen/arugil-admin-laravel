@@ -32,7 +32,7 @@
         .muted { color: var(--muted); }
         .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
         table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+        th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.15; }
         th { background: #f8fafc; color: var(--muted); font-weight: 600; }
         tr:last-child td { border-bottom: none; }
         .badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; background: #e5e7eb; color: #374151; }
