@@ -35,10 +35,11 @@
         th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.15; }
         th { background: #f8fafc; color: var(--muted); font-weight: 600; }
         tr:last-child td { border-bottom: none; }
-        .badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; background: #e5e7eb; color: #374151; }
-        .actions { display: flex; gap: 8px; }
-        .btn { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; }
+        .badge { padding: 3px 6px; border-radius: 999px; font-size: 11px; background: #e5e7eb; color: #374151; }
+        .actions { display: flex; gap: 6px; }
+        .btn { padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; font-size: 12px; }
         .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .btn-sm { padding: 4px 6px; font-size: 11px; border-radius: 6px; }
         .status { margin-bottom: 16px; color: var(--primary); }
         .filters { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
         .filters input, .filters select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
