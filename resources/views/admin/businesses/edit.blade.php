@@ -35,48 +35,61 @@
         </select>
 
         <h3 style="margin: 24px 0 16px;">Location</h3>
-        
-        <label>State</label>
-        <select name="state_id" id="state_select" onchange="loadCities()">
-            <option value="">Select State</option>
-            @foreach($states as $state)
-                <option value="{{ $state->id }}" {{ old('state_id', $business->state_id) == $state->id ? 'selected' : '' }}>{{ $state->name }}</option>
-            @endforeach
-        </select>
-        
-        <label>City</label>
-        <select name="city_id" id="city_select" onchange="loadAreas()">
-            <option value="">Select City</option>
-            @foreach($cities as $city)
-                <option value="{{ $city->id }}" {{ old('city_id', $business->city_id) == $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
-            @endforeach
-        </select>
-        
-        <label>Area</label>
-        <select name="area_id" id="area_select" onchange="setPincodeFromArea()">
-            <option value="">Select Area</option>
-            @foreach($areas as $area)
-                <option value="{{ $area->id }}" data-pincode="{{ $area->pincode }}" {{ old('area_id', $business->area_id) == $area->id ? 'selected' : '' }}>{{ $area->name }}</option>
-            @endforeach
-        </select>
-
-        <label>District</label>
-        <select name="district_id" id="district_select" onchange="loadAreas()">
-            <option value="">Select District</option>
-            @foreach($districts as $district)
-                <option value="{{ $district->id }}" {{ old('district_id', $business->district_id) == $district->id ? 'selected' : '' }}>{{ $district->name }}</option>
-            @endforeach
-        </select>
 
         @php
             $selectedAreaId = old('area_id', $business->area_id);
             $selectedArea = $areas->firstWhere('id', $selectedAreaId);
             $initialPincodeId = old('pincode_id', $business->pincode_id);
         @endphp
-        <label>Pincode</label>
-        <select id="pincode_select" name="pincode_id">
-            <option value="">Select Pincode</option>
-        </select>
+
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-items: start;">
+            <div>
+                <label>State</label>
+                <select name="state_id" id="state_select" onchange="loadCities()">
+                    <option value="">Select State</option>
+                    @foreach($states as $state)
+                        <option value="{{ $state->id }}" {{ old('state_id', $business->state_id) == $state->id ? 'selected' : '' }}>{{ $state->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label>City</label>
+                <select name="city_id" id="city_select" onchange="loadAreas()">
+                    <option value="">Select City</option>
+                    @foreach($cities as $city)
+                        <option value="{{ $city->id }}" {{ old('city_id', $business->city_id) == $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label>Area</label>
+                <select name="area_id" id="area_select" onchange="setPincodeFromArea()">
+                    <option value="">Select Area</option>
+                    @foreach($areas as $area)
+                        <option value="{{ $area->id }}" data-pincode="{{ $area->pincode }}" {{ old('area_id', $business->area_id) == $area->id ? 'selected' : '' }}>{{ $area->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label>District</label>
+                <select name="district_id" id="district_select" onchange="loadAreas()">
+                    <option value="">Select District</option>
+                    @foreach($districts as $district)
+                        <option value="{{ $district->id }}" {{ old('district_id', $business->district_id) == $district->id ? 'selected' : '' }}>{{ $district->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label>Pincode</label>
+                <select id="pincode_select" name="pincode_id">
+                    <option value="">Select Pincode</option>
+                </select>
+            </div>
+        </div>
         
         <h3 style="margin: 24px 0 16px;">Business Details</h3>
         
