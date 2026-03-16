@@ -71,14 +71,23 @@
         @php
             $selectedAreaId = old('area_id', $business->area_id);
             $selectedArea = $areas->firstWhere('id', $selectedAreaId);
+            $initialPincode = old('pincode', $business->pincode ?? ($selectedArea ? $selectedArea->pincode : ''));
         @endphp
         <label>Pincode</label>
-        <input type="text" id="pincode_display" value="{{ $selectedArea ? $selectedArea->pincode : '' }}" placeholder="Pincode" readonly>
+        <input type="text" id="pincode_input" name="pincode" value="{{ $initialPincode }}" placeholder="Pincode">
         
         <h3 style="margin: 24px 0 16px;">Business Details</h3>
         
-        <label>Owner Name</label>
-        <input type="text" name="owner_name" value="{{ old('owner_name', $business->owner_name) }}" placeholder="Enter owner's name">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+                <label>Owner Name</label>
+                <input type="text" name="owner_name" value="{{ old('owner_name', $business->owner_name) }}" placeholder="Enter owner's name">
+            </div>
+            <div>
+                <label>Years of Business</label>
+                <input type="number" name="years_of_business" value="{{ old('years_of_business', $business->years_of_business) }}" placeholder="Enter years in business" min="0" max="150">
+            </div>
+        </div>
 
         <label>Owner DP Image</label>
         @if($business->owner_image_url)
@@ -106,8 +115,7 @@
             </div>
         </div>
         
-        <label>Years of Business</label>
-        <input type="number" name="years_of_business" value="{{ old('years_of_business', $business->years_of_business) }}" placeholder="Enter years in business" min="0" max="150">
+        
         
         <label>Hero Image</label>
         @if($business->image_url)
@@ -349,29 +357,40 @@
         <button type="button" class="btn" onclick="addProduct()" style="background: #10b981; margin-top: 8px;">+ Add Product</button>
         
         <h3 style="margin: 24px 0 16px;">Contact Details</h3>
-        
-        <label>Phone</label>
-        <input type="text" name="phone" value="{{ old('phone', $business->phone) }}">
-        
-        <label>WhatsApp</label>
-        <input type="text" name="whatsapp" value="{{ old('whatsapp', $business->whatsapp) }}">
-        
-        <label>Email</label>
-        <input type="email" name="email" value="{{ old('email', $business->email) }}">
-        
-        <label>Website</label>
-        <input type="url" name="website" value="{{ old('website', $business->website) }}">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+                <label>Phone</label>
+                <input type="text" name="phone" value="{{ old('phone', $business->phone) }}">
+            </div>
+            <div>
+                <label>WhatsApp</label>
+                <input type="text" name="whatsapp" value="{{ old('whatsapp', $business->whatsapp) }}">
+            </div>
+            <div>
+                <label>Email</label>
+                <input type="email" name="email" value="{{ old('email', $business->email) }}">
+            </div>
+            <div>
+                <label>Website</label>
+                <input type="url" name="website" value="{{ old('website', $business->website) }}">
+            </div>
+        </div>
         
         <h3 style="margin: 24px 0 16px;">Location</h3>
-        
+
         <label>Address</label>
         <input type="text" name="address" value="{{ old('address', $business->address) }}">
-        
-        <label>Latitude</label>
-        <input type="text" name="latitude" value="{{ old('latitude', $business->latitude) }}">
-        
-        <label>Longitude</label>
-        <input type="text" name="longitude" value="{{ old('longitude', $business->longitude) }}">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+                <label>Latitude</label>
+                <input type="text" name="latitude" value="{{ old('latitude', $business->latitude) }}">
+            </div>
+            <div>
+                <label>Longitude</label>
+                <input type="text" name="longitude" value="{{ old('longitude', $business->longitude) }}">
+            </div>
+        </div>
 
         {{-- Geofence is managed from the Geo Fencing dashboard module. --}}
         
@@ -906,7 +925,7 @@ function loadCities() {
     const citySelect = document.getElementById('city_select');
     const areaSelect = document.getElementById('area_select');
     const districtSelect = document.getElementById('district_select');
-    const pincodeInput = document.getElementById('pincode_display');
+    const pincodeInput = document.getElementById('pincode_input');
     
     const currentCity = citySelect.value;
     const currentArea = areaSelect.value;
@@ -952,7 +971,7 @@ function loadAreas() {
     const cityId = document.getElementById('city_select').value;
     const districtId = document.getElementById('district_select').value;
     const areaSelect = document.getElementById('area_select');
-    const pincodeInput = document.getElementById('pincode_display');
+    const pincodeInput = document.getElementById('pincode_input');
 
     const currentArea = areaSelect.value;
     areaSelect.innerHTML = '<option value="">Select Area</option>';
@@ -982,8 +1001,9 @@ function loadAreas() {
 
 function setPincodeFromArea() {
     const areaSelect = document.getElementById('area_select');
-    const pincodeInput = document.getElementById('pincode_display');
+    const pincodeInput = document.getElementById('pincode_input');
     const selectedOption = areaSelect.options[areaSelect.selectedIndex];
+    // Set area pincode as suggestion but keep editable
     pincodeInput.value = selectedOption?.dataset?.pincode || '';
 }
 </script>
