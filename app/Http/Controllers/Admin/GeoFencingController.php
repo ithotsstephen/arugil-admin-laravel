@@ -18,15 +18,18 @@ class GeoFencingController extends Controller
     public function update(Request $request)
     {
         $data = $request->validate([
-            'radius' => ['nullable', 'integer', 'min:0'],
+            // radius input is in kilometers from the UI; convert to meters for storage
+            'radius' => ['nullable', 'numeric', 'min:0'],
         ]);
+
+        $meters = isset($data['radius']) && $data['radius'] !== '' ? (int) round(floatval($data['radius']) * 1000) : null;
 
         $setting = GeofenceSetting::first();
 
         if (! $setting) {
-            GeofenceSetting::create(['radius' => $data['radius'] ?? null]);
+            GeofenceSetting::create(['radius' => $meters]);
         } else {
-            $setting->update(['radius' => $data['radius'] ?? null]);
+            $setting->update(['radius' => $meters]);
         }
 
         return redirect()->route('admin.geofence.index')->with('status', 'Geofence updated.');
