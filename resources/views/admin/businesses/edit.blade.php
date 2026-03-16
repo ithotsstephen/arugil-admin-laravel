@@ -71,10 +71,12 @@
         @php
             $selectedAreaId = old('area_id', $business->area_id);
             $selectedArea = $areas->firstWhere('id', $selectedAreaId);
-            $initialPincode = old('pincode', $business->pincode ?? ($selectedArea ? $selectedArea->pincode : ''));
+            $initialPincodeId = old('pincode_id', $business->pincode_id);
         @endphp
         <label>Pincode</label>
-        <input type="text" id="pincode_input" name="pincode" value="{{ $initialPincode }}" placeholder="Pincode">
+        <select id="pincode_select" name="pincode_id">
+            <option value="">Select Pincode</option>
+        </select>
         
         <h3 style="margin: 24px 0 16px;">Business Details</h3>
         
@@ -559,6 +561,7 @@ let offerIndex = {{ $business->offers ? count($business->offers) : 1 }};
 let galleryIndex = 1;
 let paymentIndex = 1;
 let productIndex = {{ $business->products ? $business->products->count() : 1 }};
+const initialPincodeId = @json($business->pincode_id);
 
 function toggleImageInput(type) {
     const uploadInput = document.getElementById(type + '_upload_input');
@@ -925,7 +928,7 @@ function loadCities() {
     const citySelect = document.getElementById('city_select');
     const areaSelect = document.getElementById('area_select');
     const districtSelect = document.getElementById('district_select');
-    const pincodeInput = document.getElementById('pincode_input');
+    const pincodeSelect = document.getElementById('pincode_select');
     
     const currentCity = citySelect.value;
     const currentArea = areaSelect.value;
@@ -934,7 +937,7 @@ function loadCities() {
     citySelect.innerHTML = '<option value="">Select City</option>';
     areaSelect.innerHTML = '<option value="">Select Area</option>';
     districtSelect.innerHTML = '<option value="">Select District</option>';
-    pincodeInput.value = '';
+    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
     
     if (!stateId) return;
     
@@ -971,11 +974,11 @@ function loadAreas() {
     const cityId = document.getElementById('city_select').value;
     const districtId = document.getElementById('district_select').value;
     const areaSelect = document.getElementById('area_select');
-    const pincodeInput = document.getElementById('pincode_input');
+    const pincodeSelect = document.getElementById('pincode_select');
 
     const currentArea = areaSelect.value;
     areaSelect.innerHTML = '<option value="">Select Area</option>';
-    pincodeInput.value = '';
+    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
 
     if (!cityId && !districtId) return;
 
@@ -1000,11 +1003,29 @@ function loadAreas() {
 }
 
 function setPincodeFromArea() {
-    const areaSelect = document.getElementById('area_select');
-    const pincodeInput = document.getElementById('pincode_input');
-    const selectedOption = areaSelect.options[areaSelect.selectedIndex];
-    // Set area pincode as suggestion but keep editable
-    pincodeInput.value = selectedOption?.dataset?.pincode || '';
+    // Intentionally do not overwrite selected pincode when area changes.
+}
+
+function loadPincodes(cityId = null, districtId = null) {
+    const pincodeSelect = document.getElementById('pincode_select');
+    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
+
+    const params = new URLSearchParams();
+    if (cityId) params.append('city_id', cityId);
+    if (districtId) params.append('district_id', districtId);
+
+    const url = `/admin/api/locations/pincodes${params.toString() ? ('?' + params.toString()) : ''}`;
+    fetch(url)
+        .then(r => r.json())
+        .then(pincodes => {
+            pincodes.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.code;
+                if (initialPincodeId && initialPincodeId == p.id) option.selected = true;
+                pincodeSelect.appendChild(option);
+            });
+        });
 }
 </script>
 @endsection

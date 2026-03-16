@@ -18,6 +18,7 @@ class Business extends Model
         'state_id',
         'city_id',
         'district_id',
+        'pincode',
         'area_id',
         'name',
         'description',
@@ -36,15 +37,13 @@ class Business extends Model
         'address',
         'latitude',
         'longitude',
-        'geofence_radius',
-        'image_url',
-        'is_featured',
-        'is_approved',
-        'views',
-        'expiry_date',
-    ];
-
+        'phone', 'whatsapp', 'email', 'website', 'facebook', 'instagram', 'twitter', 'linkedin', 'pincode_id'
     protected $casts = [
+
+    public function pincode()
+    {
+        return $this->belongsTo(\App\Models\Pincode::class);
+    }
         'is_featured' => 'boolean',
         'is_approved' => 'boolean',
         'latitude' => 'float',

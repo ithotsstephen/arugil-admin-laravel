@@ -17,8 +17,43 @@ class LocationsController extends Controller
         $cities = City::with('state')->withCount(['businesses'])->orderBy('name')->get();
         $areas = Area::with(['city.state', 'district'])->withCount(['businesses'])->orderBy('name')->get();
         $districts = District::with('state')->withCount('businesses')->orderBy('name')->get();
+        $pincodes = \App\Models\Pincode::with(['city', 'district'])->orderBy('code')->get();
 
-        return view('admin.locations.index', compact('states', 'cities', 'districts', 'areas'));
+        return view('admin.locations.index', compact('states', 'cities', 'districts', 'areas', 'pincodes'));
+    }
+
+    // Pincode CRUD
+    public function storePincode(Request $request)
+    {
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:20', 'unique:pincodes,code'],
+            'city_id' => ['nullable', 'exists:cities,id'],
+            'district_id' => ['nullable', 'exists:districts,id'],
+        ]);
+
+        \App\Models\Pincode::create($data);
+
+        return redirect()->route('admin.locations.index')->with('status', 'Pincode added successfully.');
+    }
+
+    public function updatePincode(Request $request, \App\Models\Pincode $pincode)
+    {
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:20', 'unique:pincodes,code,' . $pincode->id],
+            'city_id' => ['nullable', 'exists:cities,id'],
+            'district_id' => ['nullable', 'exists:districts,id'],
+        ]);
+
+        $pincode->update($data);
+
+        return redirect()->route('admin.locations.index')->with('status', 'Pincode updated successfully.');
+    }
+
+    public function deletePincode(\App\Models\Pincode $pincode)
+    {
+        $pincode->delete();
+
+        return redirect()->route('admin.locations.index')->with('status', 'Pincode deleted successfully.');
     }
 
     // State CRUD
@@ -118,11 +153,11 @@ class LocationsController extends Controller
     // Area CRUD
     public function storeArea(Request $request)
     {
+
         $data = $request->validate([
             'city_id' => ['required', 'exists:cities,id'],
             'district_id' => ['required', 'exists:districts,id'],
             'name' => ['required', 'string', 'max:255'],
-            'pincode' => ['required', 'string', 'max:20'],
         ]);
 
         Area::create($data);
@@ -136,7 +171,6 @@ class LocationsController extends Controller
             'city_id' => ['required', 'exists:cities,id'],
             'district_id' => ['required', 'exists:districts,id'],
             'name' => ['required', 'string', 'max:255'],
-            'pincode' => ['required', 'string', 'max:20'],
         ]);
 
         $area->update($data);
@@ -187,6 +221,23 @@ class LocationsController extends Controller
             ->get(['id', 'name', 'pincode']);
 
         return response()->json($areas);
+    }
+
+    public function getPincodes(Request $request)
+    {
+        $pincodesQuery = \App\Models\Pincode::query();
+
+        if ($request->filled('city_id')) {
+            $pincodesQuery->where('city_id', $request->city_id);
+        }
+
+        if ($request->filled('district_id')) {
+            $pincodesQuery->where('district_id', $request->district_id);
+        }
+
+        $pincodes = $pincodesQuery->orderBy('code')->get(['id', 'code']);
+
+        return response()->json($pincodes);
     }
 }
 

@@ -40,43 +40,64 @@
             <span id="save-status-location" style="margin-left:8px; font-size:13px; color:#666;"></span>
         </h3>
         
-        <label>State</label>
-        <select name="state_id" id="state_select" onchange="loadCities()">
-            <option value="">Select State</option>
-            @foreach($states as $state)
-                <option value="{{ $state->id }}" {{ old('state_id') == $state->id ? 'selected' : '' }}>{{ $state->name }}</option>
-            @endforeach
-        </select>
-        
-        <label>City</label>
-        <select name="city_id" id="city_select" onchange="loadAreas()">
-            <option value="">Select City</option>
-        </select>
-        
-        <label>Area</label>
-        <select name="area_id" id="area_select" onchange="setPincodeFromArea()">
-            <option value="">Select Area</option>
-            @foreach($areas as $area)
-                <option value="{{ $area->id }}" data-pincode="{{ $area->pincode }}" {{ old('area_id') == $area->id ? 'selected' : '' }}>{{ $area->name }}</option>
-            @endforeach
-        </select>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-items: start;">
+            <div>
+                <label>State</label>
+                <select name="state_id" id="state_select" onchange="loadCities()">
+                    <option value="">Select State</option>
+                    @foreach($states as $state)
+                        <option value="{{ $state->id }}" {{ old('state_id') == $state->id ? 'selected' : '' }}>{{ $state->name }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-        <label>District</label>
-        <select name="district_id" id="district_select" onchange="loadAreas()">
-            <option value="">Select District</option>
-        </select>
+            <div>
+                <label>City</label>
+                <select name="city_id" id="city_select" onchange="loadAreas()">
+                    <option value="">Select City</option>
+                </select>
+            </div>
 
-        <label>Pincode</label>
-        <input type="text" id="pincode_display" placeholder="Pincode" readonly>
+            <div>
+                <label>Area</label>
+                <select name="area_id" id="area_select">
+                    <option value="">Select Area</option>
+                    @foreach($areas as $area)
+                        <option value="{{ $area->id }}" {{ old('area_id') == $area->id ? 'selected' : '' }}>{{ $area->name }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-        <label>Address</label>
-        <input type="text" name="address" value="{{ old('address') }}">
+            <div>
+                <label>District</label>
+                <select name="district_id" id="district_select" onchange="loadAreas()">
+                    <option value="">Select District</option>
+                </select>
+            </div>
 
-        <label>Latitude</label>
-        <input type="text" name="latitude" value="{{ old('latitude') }}">
+            <div>
+                <label>Pincode</label>
+                <select id="pincode_select" name="pincode_id">
+                    <option value="">Select Pincode</option>
+                </select>
+            </div>
 
-        <label>Longitude</label>
-        <input type="text" name="longitude" value="{{ old('longitude') }}">
+            <div>
+                <label>Address</label>
+                <input type="text" name="address" value="{{ old('address') }}">
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px;">
+            <div>
+                <label>Latitude</label>
+                <input type="text" name="latitude" value="{{ old('latitude') }}">
+            </div>
+            <div>
+                <label>Longitude</label>
+                <input type="text" name="longitude" value="{{ old('longitude') }}">
+            </div>
+        </div>
 
             <label>Keywords <span style="font-size:12px; color:#888;">(up to 12, separated by commas)</span></label>
             <input type="text" name="keywords" value="{{ old('keywords') }}" placeholder="e.g. restaurant, cafe, pizza, delivery" maxlength="255">
@@ -87,8 +108,16 @@
             <span id="save-status-details" style="margin-left:8px; font-size:13px; color:#666;"></span>
         </h3>
         
-        <label>Owner Name</label>
-        <input type="text" name="owner_name" value="{{ old('owner_name') }}" placeholder="Enter owner's name">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-items: start;">
+            <div>
+                <label>Owner Name</label>
+                <input type="text" name="owner_name" value="{{ old('owner_name') }}" placeholder="Enter owner's name">
+            </div>
+            <div>
+                <label>Years of Business</label>
+                <input type="number" name="years_of_business" value="{{ old('years_of_business') }}" placeholder="Enter years in business" min="0" max="150">
+            </div>
+        </div>
 
         <label>Owner DP Image</label>
         <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 14px;">
@@ -244,17 +273,24 @@
             <span id="save-status-contact" style="margin-left:8px; font-size:13px; color:#666;"></span>
         </h3>
         
-        <label>Phone</label>
-        <input type="text" name="phone" value="{{ old('phone') }}">
-        
-        <label>WhatsApp</label>
-        <input type="text" name="whatsapp" value="{{ old('whatsapp') }}">
-        
-        <label>Email</label>
-        <input type="email" name="email" value="{{ old('email') }}">
-        
-        <label>Website</label>
-        <input type="url" name="website" value="{{ old('website') }}">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+            <div>
+                <label>Phone</label>
+                <input type="text" name="phone" value="{{ old('phone') }}">
+            </div>
+            <div>
+                <label>WhatsApp</label>
+                <input type="text" name="whatsapp" value="{{ old('whatsapp') }}">
+            </div>
+            <div>
+                <label>Email</label>
+                <input type="email" name="email" value="{{ old('email') }}">
+            </div>
+            <div>
+                <label>Website</label>
+                <input type="url" name="website" value="{{ old('website') }}">
+            </div>
+        </div>
         
         
 
@@ -654,12 +690,12 @@ function loadCities() {
     const citySelect = document.getElementById('city_select');
     const areaSelect = document.getElementById('area_select');
     const districtSelect = document.getElementById('district_select');
-    const pincodeInput = document.getElementById('pincode_display');
+    const pincodeSelect = document.getElementById('pincode_select');
     
     citySelect.innerHTML = '<option value="">Select City</option>';
     areaSelect.innerHTML = '<option value="">Select Area</option>';
     districtSelect.innerHTML = '<option value="">Select District</option>';
-    pincodeInput.value = '';
+    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
     
     if (!stateId) return;
     
@@ -684,16 +720,19 @@ function loadCities() {
                 districtSelect.appendChild(option);
             });
         });
+
+    // Load pincodes for the selected state (no filters) to populate dropdown
+    loadPincodes();
 }
 
 function loadAreas() {
     const cityId = document.getElementById('city_select').value;
     const districtId = document.getElementById('district_select').value;
     const areaSelect = document.getElementById('area_select');
-    const pincodeInput = document.getElementById('pincode_display');
+    const pincodeSelect = document.getElementById('pincode_select');
 
     areaSelect.innerHTML = '<option value="">Select Area</option>';
-    pincodeInput.value = '';
+    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
 
     if (!cityId && !districtId) return;
 
@@ -708,18 +747,39 @@ function loadAreas() {
                 const option = document.createElement('option');
                 option.value = area.id;
                 option.textContent = area.name;
-                option.dataset.pincode = area.pincode;
                 areaSelect.appendChild(option);
             });
         });
 }
 
-function setPincodeFromArea() {
-    const areaSelect = document.getElementById('area_select');
-    const pincodeInput = document.getElementById('pincode_display');
-    const selectedOption = areaSelect.options[areaSelect.selectedIndex];
-    pincodeInput.value = selectedOption?.dataset?.pincode || '';
+// Area and Pincode are intentionally unlinked in the Add Business form.
+function setPincodeFromArea() { /* intentionally left blank */ }
+
+function loadPincodes(cityId = null, districtId = null) {
+    const pincodeSelect = document.getElementById('pincode_select');
+    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
+
+    const params = new URLSearchParams();
+    if (cityId) params.append('city_id', cityId);
+    if (districtId) params.append('district_id', districtId);
+
+    const url = `/admin/api/locations/pincodes${params.toString() ? ('?' + params.toString()) : ''}`;
+    fetch(url)
+        .then(r => r.json())
+        .then(pincodes => {
+            pincodes.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.code;
+                pincodeSelect.appendChild(option);
+            });
+        });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    // populate pincodes initially
+    loadPincodes();
+});
 
 // Save a single section via AJAX. Collects inputs between the section header and the next header.
 async function saveSection(section) {
