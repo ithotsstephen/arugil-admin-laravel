@@ -1040,5 +1040,14 @@ function loadPincodes(cityId = null, districtId = null) {
             });
         });
 }
+
+// On page load, populate pincode select for existing business
+document.addEventListener('DOMContentLoaded', () => {
+    const cityEl = document.getElementById('city_select');
+    const districtEl = document.getElementById('district_select');
+    const cityId = cityEl ? cityEl.value : null;
+    const districtId = districtEl ? districtEl.value : null;
+    loadPincodes(cityId, districtId);
+});
 </script>
 @endsection
