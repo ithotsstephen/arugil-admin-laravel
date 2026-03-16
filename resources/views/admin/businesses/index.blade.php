@@ -46,18 +46,18 @@
         <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'category', 'direction' => $toggle('category')])) }}">Category @if($currentSort=='category') ({{ strtoupper($currentDir) }}) @endif</a></th>
         <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'owner', 'direction' => $toggle('owner')])) }}">Owner @if($currentSort=='owner') ({{ strtoupper($currentDir) }}) @endif</a></th>
         <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'is_approved', 'direction' => $toggle('is_approved')])) }}">Status @if($currentSort=='is_approved') ({{ strtoupper($currentDir) }}) @endif</a></th>
-        <th>WhatsApp</th>
         <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'is_featured', 'direction' => $toggle('is_featured')])) }}">Featured @if($currentSort=='is_featured') ({{ strtoupper($currentDir) }}) @endif</a></th>
+        <th>WhatsApp</th>
         <th><a href="{{ route('admin.businesses.index', array_merge(request()->all(), ['sort' => 'expiry_date', 'direction' => $toggle('expiry_date')])) }}">Expiry @if($currentSort=='expiry_date') ({{ strtoupper($currentDir) }}) @endif</a></th>
         <th>Actions</th>
     </tr>
     </thead>
     <tbody>
     @forelse($businesses as $business)
-            <td>{{ $business->whatsapp ?? '—' }}</td>
-            <td>
-                <span class="badge">{{ $business->is_featured ? 'Yes' : 'No' }}</span>
-            </td>
+        <tr>
+            <td>{{ $business->name }}</td>
+            <td>{{ $business->category?->name }}</td>
+            <td>{{ $business->owner?->name }}</td>
             <td>
                 <span class="badge">{{ $business->is_approved ? 'Approved' : 'Pending' }}</span>
             </td>
