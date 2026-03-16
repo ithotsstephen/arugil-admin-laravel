@@ -90,7 +90,7 @@ class BusinessesController extends Controller
                 $query->orderByDesc('created_at');
             }
 
-            $businesses = $query->paginate(20)->withQueryString();
+            $businesses = $query->paginate(50)->withQueryString();
 
             return view('admin.businesses.index', compact('businesses'));
     }
