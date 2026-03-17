@@ -50,4 +50,9 @@ return [
         'redirect' => env('TWITTER_REDIRECT'),
     ],
 
+    'msg91' => [
+        'authkey' => env('MSG91_AUTH_KEY'),
+        'verify_url' => env('MSG91_VERIFY_URL', 'https://control.msg91.com/api/v5/widget/verifyAccessToken'),
+    ],
+
 ];

@@ -27,6 +27,7 @@ Route::prefix('v1')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
         Route::post('social', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'token']);
+        Route::post('verify-widget-token', [AuthController::class, 'verifyWidgetToken']);
     });
 
     Route::get('categories', [CategoryController::class, 'index']);
