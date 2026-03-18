@@ -45,6 +45,21 @@ class CategoriesController extends Controller
             // keep as-is
         }
 
+        // If a category_id hidden field is present, treat this as an update
+        if ($request->filled('category_id')) {
+            $cat = Category::find($request->input('category_id'));
+            if ($cat) {
+                if ($request->hasFile('icon_file')) {
+                    $svg = file_get_contents($request->file('icon_file')->getRealPath());
+                    $data['icon_svg'] = $svg;
+                    $data['icon'] = $data['icon'] ?? null;
+                }
+
+                $cat->update($data);
+                return redirect()->back()->with('status', 'Category updated.');
+            }
+        }
+
         Category::create($data);
 
         return redirect()->back()->with('status', 'Category created.');

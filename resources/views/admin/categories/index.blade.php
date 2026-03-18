@@ -16,6 +16,7 @@
     <form id="categoryForm" method="POST" action="{{ route('admin.categories.store') }}" enctype="multipart/form-data">
         @csrf
         <div class="filters">
+            <input type="hidden" name="category_id" value="">
             <input type="text" name="name" placeholder="Category name" required>
             <input type="text" name="icon" placeholder="Icon URL">
             <input type="file" name="icon_file" accept="image/svg+xml">
@@ -106,6 +107,9 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
     if (fileInput) { fileInput.value = null; }
     // Always set parent select; use empty string for main categories
     form.querySelector('select[name="parent_id"]').value = parent ?? '';
+    // Set hidden category_id so server can detect update if POST accidentally used
+    const hiddenId = form.querySelector('input[name="category_id"]');
+    if (hiddenId) { hiddenId.value = id; }
     form.action = '/admin/categories/' + id;
     let method = form.querySelector('input[name="_method"]');
     if (!method) {
