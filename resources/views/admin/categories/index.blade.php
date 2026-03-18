@@ -187,25 +187,7 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
             }
         }
 
-        // After moving the group, determine new parent_id based on previous sibling
-        const prev = dragGroup[0].previousElementSibling;
-        let newParent = null;
-        if (prev && prev.dataset) {
-            // If previous sibling is a main category (no parent) then become its child
-            if (prev.dataset.parent === '' || prev.dataset.parent === undefined) {
-                newParent = prev.dataset.id;
-            } else {
-                // otherwise, share the same parent as previous sibling
-                newParent = prev.dataset.parent || null;
-            }
-        } else {
-            newParent = null;
-        }
-
-        // Update dataset.parent for all rows in the dragged group
-        dragGroup.forEach(r => {
-            r.dataset.parent = newParent ? String(newParent) : '';
-        });
+        // (no parent-change on drop; only reorder)
     });
 
     tbody.addEventListener('drop', (e) => {
