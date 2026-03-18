@@ -13,7 +13,7 @@
 @endif
 
     <div class="card" style="margin-bottom: 16px;">
-    <form method="POST" action="{{ route('admin.categories.store') }}" enctype="multipart/form-data">
+    <form id="categoryForm" method="POST" action="{{ route('admin.categories.store') }}" enctype="multipart/form-data">
         @csrf
         <div class="filters">
             <input type="text" name="name" placeholder="Category name" required>
@@ -27,7 +27,7 @@
                 @endforeach
             </select>
             <input type="number" name="sort_order" placeholder="Sort" min="0">
-            <button class="btn btn-primary" type="submit">Add</button>
+                <button class="btn btn-primary" type="submit">Add</button>
         </div>
     </form>
 </div>
@@ -56,7 +56,7 @@
             <td>—</td>
             <td>{{ $category->sort_order }}</td>
             <td class="actions">
-                <button class="btn" onclick="editCategory({{ $category->id }}, '{{ $category->name }}', '{{ $category->icon }}', {{ $category->sort_order }})">Edit</button>
+                <button class="btn" onclick="editCategory({{ $category->id }}, @json($category->name), @json($category->icon), @json($category->icon_svg), {{ $category->sort_order }})">Edit</button>
                 <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" style="display: inline;">
                     @csrf
                     @method('DELETE')
@@ -77,7 +77,7 @@
                 <td>{{ $category->name }}</td>
                 <td>{{ $child->sort_order }}</td>
                 <td class="actions">
-                    <button class="btn" onclick="editCategory({{ $child->id }}, '{{ $child->name }}', '{{ $child->icon }}', {{ $child->sort_order }}, {{ $child->parent_id }})">Edit</button>
+                    <button class="btn" onclick="editCategory({{ $child->id }}, @json($child->name), @json($child->icon), @json($child->icon_svg), {{ $child->sort_order }}, {{ $child->parent_id }})">Edit</button>
                     <form method="POST" action="{{ route('admin.categories.destroy', $child) }}" style="display: inline;">
                         @csrf
                         @method('DELETE')
@@ -95,24 +95,30 @@
 </table>
 
     <script>
-function editCategory(id, name, icon, sort, parent = null) {
-    document.querySelector('input[name="name"]').value = name;
-    document.querySelector('input[name="icon"]').value = icon || '';
-    document.querySelector('textarea[name="icon_svg"]').value = '';
-    document.querySelector('input[name="sort_order"]').value = sort;
+function editCategory(id, name, icon, icon_svg, sort, parent = null) {
+    const form = document.getElementById('categoryForm');
+    form.querySelector('input[name="name"]').value = name || '';
+    form.querySelector('input[name="icon"]').value = icon || '';
+    form.querySelector('textarea[name="icon_svg"]').value = icon_svg || '';
+    form.querySelector('input[name="sort_order"]').value = sort || 0;
+    // Clear file input when editing
+    const fileInput = form.querySelector('input[name="icon_file"]');
+    if (fileInput) { fileInput.value = null; }
     if (parent) {
-        document.querySelector('select[name="parent_id"]').value = parent;
+        form.querySelector('select[name="parent_id"]').value = parent;
     }
-    const form = document.querySelector('form');
     form.action = '/admin/categories/' + id;
-    const method = document.createElement('input');
-    method.type = 'hidden';
-    method.name = '_method';
-    method.value = 'PUT';
-    if (!form.querySelector('input[name="_method"]')) {
+    let method = form.querySelector('input[name="_method"]');
+    if (!method) {
+        method = document.createElement('input');
+        method.type = 'hidden';
+        method.name = '_method';
+        method.value = 'PUT';
         form.appendChild(method);
+    } else {
+        method.value = 'PUT';
     }
-    document.querySelector('.btn-primary').textContent = 'Update';
+    form.querySelector('.btn-primary').textContent = 'Update';
 }
 </script>
 @endsection
