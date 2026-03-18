@@ -206,11 +206,14 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
         const rows = Array.from(tbody.querySelectorAll('tr'));
         const order = rows.map(r => ({ id: parseInt(r.dataset.id, 10), parent_id: r.dataset.parent ? (r.dataset.parent === '' ? null : parseInt(r.dataset.parent, 10)) : null }));
 
+        const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = tokenMeta ? tokenMeta.getAttribute('content') : (document.querySelector('input[name="_token"]') ? document.querySelector('input[name="_token"]').value : '');
+
         fetch('{{ route('admin.categories.reorder') }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                'X-CSRF-TOKEN': csrfToken
             },
             body: JSON.stringify({ order })
         }).then(r => r.json()).then(data => {
