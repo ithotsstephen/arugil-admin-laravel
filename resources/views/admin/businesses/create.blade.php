@@ -79,6 +79,11 @@
                 <label>Pincode</label>
                 <select id="pincode_select" name="pincode_id">
                     <option value="">Select Pincode</option>
+                    @isset($pincodes)
+                        @foreach($pincodes as $pc)
+                            <option value="{{ $pc->id }}">{{ $pc->code }}</option>
+                        @endforeach
+                    @endisset
                 </select>
             </div>
 
@@ -701,7 +706,7 @@ function loadCities() {
     citySelect.innerHTML = '<option value="">Select City</option>';
     areaSelect.innerHTML = '<option value="">Select Area</option>';
     districtSelect.innerHTML = '<option value="">Select District</option>';
-    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
+    
     
     if (!stateId) return;
     
@@ -740,7 +745,6 @@ function loadAreas() {
     const pincodeSelect = document.getElementById('pincode_select');
 
     areaSelect.innerHTML = '<option value="">Select Area</option>';
-    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
 
     if (!cityId && !districtId) return;
 

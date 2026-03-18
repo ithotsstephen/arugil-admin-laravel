@@ -100,7 +100,8 @@ class BusinessesController extends Controller
         $categories = \App\Models\Category::with('children')->whereNull('parent_id')->get();
         $states = \App\Models\State::orderBy('name')->get();
         $areas = collect();
-        return view('admin.businesses.create', compact('categories', 'states', 'areas'));
+        $pincodes = \App\Models\Pincode::orderBy('code')->get();
+        return view('admin.businesses.create', compact('categories', 'states', 'areas', 'pincodes'));
     }
 
     /**
