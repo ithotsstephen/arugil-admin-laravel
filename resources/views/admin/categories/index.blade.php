@@ -146,6 +146,7 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
         dragEl = handle.closest('tr');
         dragEl.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', 'drag'); } catch (err) { /* noop for some browsers */ }
     });
 
     tbody.addEventListener('dragover', (e) => {
@@ -165,6 +166,10 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
         e.preventDefault();
         if (dragEl) { dragEl.classList.remove('dragging'); }
         sendOrder();
+    });
+
+    tbody.addEventListener('dragend', (e) => {
+        if (dragEl) { dragEl.classList.remove('dragging'); dragEl = null; }
     });
 
     function sendOrder() {
