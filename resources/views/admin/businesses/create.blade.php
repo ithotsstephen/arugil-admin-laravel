@@ -775,8 +775,11 @@ function loadPincodes(cityId = null, districtId = null) {
     if (districtId) params.append('district_id', districtId);
 
     const url = `/admin/api/locations/pincodes${params.toString() ? ('?' + params.toString()) : ''}`;
-    fetch(url)
-        .then(r => r.json())
+    fetch(url, { credentials: 'same-origin' })
+        .then(r => {
+            if (!r.ok) throw new Error('Network response was not ok: ' + r.status);
+            return r.json();
+        })
         .then(pincodes => {
             pincodes.forEach(p => {
                 const option = document.createElement('option');
@@ -784,6 +787,13 @@ function loadPincodes(cityId = null, districtId = null) {
                 option.textContent = p.code;
                 pincodeSelect.appendChild(option);
             });
+        })
+        .catch(err => {
+            console.error('Failed to load pincodes', err);
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'Error loading pincodes';
+            pincodeSelect.appendChild(option);
         });
 }
 
