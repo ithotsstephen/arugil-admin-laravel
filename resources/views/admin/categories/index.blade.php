@@ -43,9 +43,9 @@
         <th>Actions</th>
     </tr>
     </thead>
-    <tbody>
+    <tbody id="categoriesTbody">
     @forelse($categories as $category)
-        <tr style="background: #f9fafb;">
+        <tr draggable="true" data-id="{{ $category->id }}" data-parent="" style="background: #f9fafb;">
             <td><strong>{{ $category->name }}</strong></td>
             <td>
                 @if(!empty($category->icon_svg))
@@ -66,7 +66,7 @@
             </td>
         </tr>
         @foreach($category->children as $child)
-            <tr>
+            <tr draggable="true" data-id="{{ $child->id }}" data-parent="{{ $category->id }}">
                 <td style="padding-left: 30px;">↳ {{ $child->name }}</td>
                 <td>
                     @if(!empty($child->icon_svg))
@@ -123,5 +123,53 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
     }
     form.querySelector('.btn-primary').textContent = 'Update';
 }
+</script>
+<script>
+// Drag and drop ordering
+(() => {
+    const tbody = document.getElementById('categoriesTbody');
+    let dragEl = null;
+
+    tbody.addEventListener('dragstart', (e) => {
+        dragEl = e.target.closest('tr');
+        e.dataTransfer.effectAllowed = 'move';
+    });
+
+    tbody.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const tr = e.target.closest('tr');
+        if (!tr || tr === dragEl) return;
+        const rect = tr.getBoundingClientRect();
+        const after = (e.clientY - rect.top) > (rect.height / 2);
+        if (after) {
+            tr.parentNode.insertBefore(dragEl, tr.nextSibling);
+        } else {
+            tr.parentNode.insertBefore(dragEl, tr);
+        }
+    });
+
+    tbody.addEventListener('drop', (e) => {
+        e.preventDefault();
+        sendOrder();
+    });
+
+    function sendOrder() {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const order = rows.map(r => ({ id: parseInt(r.dataset.id, 10), parent_id: r.dataset.parent ? (r.dataset.parent === '' ? null : parseInt(r.dataset.parent, 10)) : null }));
+
+        fetch('{{ route('admin.categories.reorder') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+            },
+            body: JSON.stringify({ order })
+        }).then(r => r.json()).then(data => {
+            if (!data.success) {
+                alert('Failed to save order');
+            }
+        }).catch(() => alert('Failed to save order'));
+    }
+})();
 </script>
 @endsection

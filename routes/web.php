@@ -54,6 +54,7 @@ Route::prefix('admin')
             Route::put('/users/{user}', [UsersController::class, 'update'])->name('users.update');
             Route::get('/categories', [CategoriesController::class, 'index'])->name('categories.index');
             Route::post('/categories', [CategoriesController::class, 'store'])->name('categories.store');
+            Route::post('/categories/reorder', [CategoriesController::class, 'reorder'])->name('categories.reorder');
             Route::put('/categories/{category}', [CategoriesController::class, 'update'])->name('categories.update');
             Route::delete('/categories/{category}', [CategoriesController::class, 'destroy'])->name('categories.destroy');
             

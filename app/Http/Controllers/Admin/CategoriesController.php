@@ -11,12 +11,43 @@ class CategoriesController extends Controller
     public function index()
     {
         $categories = Category::query()
-            ->with('children')
+            ->with(['children' => function ($q) {
+                $q->orderBy('sort_order');
+            }])
             ->whereNull('parent_id')
             ->orderBy('sort_order')
             ->get();
 
         return view('admin.categories.index', compact('categories'));
+    }
+
+    /**
+     * Persist categories order from admin panel.
+     */
+    public function reorder(Request $request)
+    {
+        $data = $request->validate([
+            'order' => ['required', 'array'],
+            'order.*.id' => ['required', 'integer', 'exists:categories,id'],
+            'order.*.parent_id' => ['nullable', 'integer', 'exists:categories,id'],
+        ]);
+
+        $items = $data['order'];
+
+        // group by parent_id to assign sort_order within each parent
+        $groups = [];
+        foreach ($items as $item) {
+            $parent = $item['parent_id'] ?? null;
+            $groups[$parent][] = $item['id'];
+        }
+
+        foreach ($groups as $parent => $ids) {
+            foreach ($ids as $index => $id) {
+                Category::where('id', $id)->update(['sort_order' => $index, 'parent_id' => $parent]);
+            }
+        }
+
+        return response()->json(['success' => true]);
     }
 
     public function store(Request $request)
