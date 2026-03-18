@@ -12,12 +12,14 @@
     <div class="status">{{ session('status') }}</div>
 @endif
 
-<div class="card" style="margin-bottom: 16px;">
-    <form method="POST" action="{{ route('admin.categories.store') }}">
+    <div class="card" style="margin-bottom: 16px;">
+    <form method="POST" action="{{ route('admin.categories.store') }}" enctype="multipart/form-data">
         @csrf
         <div class="filters">
             <input type="text" name="name" placeholder="Category name" required>
             <input type="text" name="icon" placeholder="Icon URL">
+            <input type="file" name="icon_file" accept="image/svg+xml">
+            <textarea name="icon_svg" placeholder="Or paste raw SVG here" style="min-height:40px"></textarea>
             <select name="parent_id">
                 <option value="">Main category</option>
                 @foreach($categories as $category)
@@ -44,7 +46,13 @@
     @forelse($categories as $category)
         <tr style="background: #f9fafb;">
             <td><strong>{{ $category->name }}</strong></td>
-            <td>{{ $category->icon }}</td>
+            <td>
+                @if(!empty($category->icon_svg))
+                    {!! $category->icon_svg !!}
+                @elseif(!empty($category->icon))
+                    {{ $category->icon }}
+                @endif
+            </td>
             <td>—</td>
             <td>{{ $category->sort_order }}</td>
             <td class="actions">
@@ -59,7 +67,13 @@
         @foreach($category->children as $child)
             <tr>
                 <td style="padding-left: 30px;">↳ {{ $child->name }}</td>
-                <td>{{ $child->icon }}</td>
+                <td>
+                    @if(!empty($child->icon_svg))
+                        {!! $child->icon_svg !!}
+                    @elseif(!empty($child->icon))
+                        {{ $child->icon }}
+                    @endif
+                </td>
                 <td>{{ $category->name }}</td>
                 <td>{{ $child->sort_order }}</td>
                 <td class="actions">
@@ -80,10 +94,11 @@
     </tbody>
 </table>
 
-<script>
+    <script>
 function editCategory(id, name, icon, sort, parent = null) {
     document.querySelector('input[name="name"]').value = name;
     document.querySelector('input[name="icon"]').value = icon || '';
+    document.querySelector('textarea[name="icon_svg"]').value = '';
     document.querySelector('input[name="sort_order"]').value = sort;
     if (parent) {
         document.querySelector('select[name="parent_id"]').value = parent;

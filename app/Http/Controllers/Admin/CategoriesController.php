@@ -24,11 +24,26 @@ class CategoriesController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'icon' => ['nullable', 'string', 'max:255'],
+            'icon_file' => ['nullable', 'file', 'mimetypes:image/svg+xml'],
+            'icon_svg' => ['nullable', 'string'],
             'parent_id' => ['nullable', 'exists:categories,id'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $data['sort_order'] = $data['sort_order'] ?? 0;
+
+        // If an SVG file was uploaded, read its contents and store raw SVG
+        if ($request->hasFile('icon_file')) {
+            $svg = file_get_contents($request->file('icon_file')->getRealPath());
+            $data['icon_svg'] = $svg;
+            // clear icon URL if any
+            $data['icon'] = $data['icon'] ?? null;
+        }
+
+        // If raw svg text provided in form, prefer it
+        if (!empty($data['icon_svg'])) {
+            // keep as-is
+        }
 
         Category::create($data);
 
@@ -40,11 +55,24 @@ class CategoriesController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'icon' => ['nullable', 'string', 'max:255'],
+            'icon_file' => ['nullable', 'file', 'mimetypes:image/svg+xml'],
+            'icon_svg' => ['nullable', 'string'],
             'parent_id' => ['nullable', 'exists:categories,id'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $data['sort_order'] = $data['sort_order'] ?? 0;
+
+        if ($request->hasFile('icon_file')) {
+            $svg = file_get_contents($request->file('icon_file')->getRealPath());
+            $data['icon_svg'] = $svg;
+            $data['icon'] = $data['icon'] ?? null;
+        }
+
+        // If raw svg text present, use it
+        if (!empty($data['icon_svg'])) {
+            // leave as-is
+        }
 
         $category->update($data);
 

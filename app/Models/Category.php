@@ -11,6 +11,7 @@ class Category extends Model
     protected $fillable = [
         'name',
         'icon',
+        'icon_svg',
         'parent_id',
         'sort_order',
     ];
