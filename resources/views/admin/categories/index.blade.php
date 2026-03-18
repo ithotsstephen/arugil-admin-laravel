@@ -53,7 +53,7 @@
     <tbody id="categoriesTbody">
     @forelse($categories as $category)
         <tr draggable="true" data-id="{{ $category->id }}" data-parent="" style="background: #f9fafb;">
-            <td class="drag-handle">☰</td>
+            <td class="drag-handle" draggable="true">☰</td>
             <td><strong>{{ $category->name }}</strong></td>
             <td>
                 @if(!empty($category->icon_svg))
@@ -75,7 +75,7 @@
         </tr>
         @foreach($category->children as $child)
             <tr draggable="true" data-id="{{ $child->id }}" data-parent="{{ $category->id }}">
-                <td class="drag-handle">☰</td>
+                <td class="drag-handle" draggable="true">☰</td>
                 <td style="padding-left: 30px;">↳ {{ $child->name }}</td>
                 <td>
                     @if(!empty($child->icon_svg))
