@@ -731,6 +731,8 @@ function loadCities() {
     loadPincodes();
 }
 
+
+// After areas load, also load pincodes filtered by city/district so pincodes remain independent
 function loadAreas() {
     const cityId = document.getElementById('city_select').value;
     const districtId = document.getElementById('district_select').value;
@@ -755,6 +757,9 @@ function loadAreas() {
                 option.textContent = area.name;
                 areaSelect.appendChild(option);
             });
+
+            // Keep pincode independent: load pincodes filtered by selected city/district
+            loadPincodes(cityId || null, districtId || null);
         });
 }
 
