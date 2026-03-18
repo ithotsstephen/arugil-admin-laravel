@@ -134,42 +134,70 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
 }
 </script>
 <script>
-// Drag and drop ordering
+// Drag and drop ordering — move parent together with its children
 (() => {
     const tbody = document.getElementById('categoriesTbody');
-    let dragEl = null;
+    let dragGroup = [];
+
+    function findGroupFor(tr) {
+        const group = [tr];
+        const id = tr.dataset.id;
+        let next = tr.nextElementSibling;
+        while (next && next.dataset && String(next.dataset.parent) === String(id)) {
+            group.push(next);
+            next = next.nextElementSibling;
+        }
+        return group;
+    }
 
     tbody.addEventListener('dragstart', (e) => {
-        // only allow dragging when started from the drag-handle
         const handle = e.target.closest('.drag-handle');
         if (!handle) { e.preventDefault(); return; }
-        dragEl = handle.closest('tr');
-        dragEl.classList.add('dragging');
+        const tr = handle.closest('tr');
+        dragGroup = findGroupFor(tr);
+        dragGroup.forEach(r => r.classList.add('dragging'));
         e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', 'drag'); } catch (err) { /* noop for some browsers */ }
+        try { e.dataTransfer.setData('text/plain', 'drag'); } catch (err) { /* some browsers require setData */ }
     });
 
     tbody.addEventListener('dragover', (e) => {
         e.preventDefault();
         const tr = e.target.closest('tr');
-        if (!tr || tr === dragEl) return;
+        if (!tr || dragGroup.length === 0) return;
+        // if target is inside the dragged group, ignore
+        if (dragGroup.includes(tr)) return;
+
         const rect = tr.getBoundingClientRect();
         const after = (e.clientY - rect.top) > (rect.height / 2);
+
+        const parent = tr.parentNode;
+
         if (after) {
-            tr.parentNode.insertBefore(dragEl, tr.nextSibling);
+            // insert group after target
+            parent.insertBefore(dragGroup[0], tr.nextSibling);
+            // ensure all group rows follow in order
+            for (let i = 1; i < dragGroup.length; i++) {
+                parent.insertBefore(dragGroup[i], dragGroup[i-1].nextSibling);
+            }
         } else {
-            tr.parentNode.insertBefore(dragEl, tr);
+            // insert group before target
+            parent.insertBefore(dragGroup[0], tr);
+            for (let i = 1; i < dragGroup.length; i++) {
+                parent.insertBefore(dragGroup[i], dragGroup[i-1].nextSibling);
+            }
         }
     });
 
     tbody.addEventListener('drop', (e) => {
         e.preventDefault();
-        if (dragEl) { dragEl.classList.remove('dragging'); }
+        dragGroup.forEach(r => r.classList.remove('dragging'));
+        dragGroup = [];
         sendOrder();
     });
 
     tbody.addEventListener('dragend', (e) => {
-        if (dragEl) { dragEl.classList.remove('dragging'); dragEl = null; }
+        dragGroup.forEach(r => r.classList.remove('dragging'));
+        dragGroup = [];
     });
 
     function sendOrder() {
