@@ -39,7 +39,7 @@ class Business extends Model
         'image_url',
         'owner_image_url',
         'pincode',
-        'pincode_id',
+        
         'is_approved',
         'is_featured',
         'expiry_date',
@@ -59,7 +59,7 @@ class Business extends Model
 
     public function pincode()
     {
-        return $this->belongsTo(\App\Models\Pincode::class);
+        return null;
     }
 
     public function owner(): BelongsTo

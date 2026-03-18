@@ -39,7 +39,6 @@
         @php
             $selectedAreaId = old('area_id', $business->area_id);
             $selectedArea = $areas->firstWhere('id', $selectedAreaId);
-            $initialPincodeId = old('pincode_id', $business->pincode_id);
         @endphp
 
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-items: start;">
@@ -85,9 +84,7 @@
 
             <div>
                 <label>Pincode</label>
-                <select id="pincode_select" name="pincode_id">
-                    <option value="">Select Pincode</option>
-                </select>
+                <input type="text" id="pincode_input" name="pincode" value="{{ old('pincode', $business->pincode) }}" placeholder="Enter pincode">
             </div>
         </div>
         
@@ -574,7 +571,6 @@ let offerIndex = {{ $business->offers ? count($business->offers) : 1 }};
 let galleryIndex = 1;
 let paymentIndex = 1;
 let productIndex = {{ $business->products ? $business->products->count() : 1 }};
-const initialPincodeId = @json($business->pincode_id);
 
 function toggleImageInput(type) {
     const uploadInput = document.getElementById(type + '_upload_input');
@@ -1019,35 +1015,6 @@ function setPincodeFromArea() {
     // Intentionally do not overwrite selected pincode when area changes.
 }
 
-function loadPincodes(cityId = null, districtId = null) {
-    const pincodeSelect = document.getElementById('pincode_select');
-    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
-
-    const params = new URLSearchParams();
-    if (cityId) params.append('city_id', cityId);
-    if (districtId) params.append('district_id', districtId);
-
-    const url = `/admin/api/locations/pincodes${params.toString() ? ('?' + params.toString()) : ''}`;
-    fetch(url)
-        .then(r => r.json())
-        .then(pincodes => {
-            pincodes.forEach(p => {
-                const option = document.createElement('option');
-                option.value = p.id;
-                option.textContent = p.code;
-                if (initialPincodeId && initialPincodeId == p.id) option.selected = true;
-                pincodeSelect.appendChild(option);
-            });
-        });
-}
-
-// On page load, populate pincode select for existing business
-document.addEventListener('DOMContentLoaded', () => {
-    const cityEl = document.getElementById('city_select');
-    const districtEl = document.getElementById('district_select');
-    const cityId = cityEl ? cityEl.value : null;
-    const districtId = districtEl ? districtEl.value : null;
-    loadPincodes(cityId, districtId);
-});
+// Pincode is a free-text field; no client-side loader required
 </script>
 @endsection
