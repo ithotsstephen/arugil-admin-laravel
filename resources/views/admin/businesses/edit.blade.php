@@ -44,7 +44,7 @@
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-items: start;">
             <div>
                 <label>State</label>
-                <select name="state_id" id="state_select" onchange="loadCities()">
+                <select name="state_id" id="state_select" onchange="loadCities(true)">
                     <option value="">Select State</option>
                     @foreach($states as $state)
                         <option value="{{ $state->id }}" {{ old('state_id', $business->state_id) == $state->id ? 'selected' : '' }}>{{ $state->name }}</option>
@@ -54,7 +54,7 @@
 
             <div>
                 <label>City</label>
-                <select name="city_id" id="city_select" onchange="loadAreas()">
+                <select name="city_id" id="city_select" onchange="loadAreas(true)">
                     <option value="">Select City</option>
                     @foreach($cities as $city)
                         <option value="{{ $city->id }}" {{ old('city_id', $business->city_id) == $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
@@ -74,7 +74,7 @@
 
             <div>
                 <label>District</label>
-                <select name="district_id" id="district_select" onchange="loadAreas()">
+                <select name="district_id" id="district_select" onchange="loadAreas(true)">
                     <option value="">Select District</option>
                     @foreach($districts as $district)
                         <option value="{{ $district->id }}" {{ old('district_id', $business->district_id) == $district->id ? 'selected' : '' }}>{{ $district->name }}</option>
@@ -932,25 +932,30 @@ function savePayment(button) {
         .catch(() => alert('Failed to save payment'));
 }
 
-function loadCities() {
+function loadCities(force = false) {
     const stateId = document.getElementById('state_select').value;
     const citySelect = document.getElementById('city_select');
     const areaSelect = document.getElementById('area_select');
     const districtSelect = document.getElementById('district_select');
     const pincodeSelect = document.getElementById('pincode_select');
-    
-    const currentCity = citySelect.value;
-    const currentArea = areaSelect.value;
-    const currentDistrict = districtSelect.value;
 
-    citySelect.innerHTML = '<option value="">Select City</option>';
-    areaSelect.innerHTML = '<option value="">Select Area</option>';
-    districtSelect.innerHTML = '<option value="">Select District</option>';
-    pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
-    
+    const currentCity = citySelect ? citySelect.value : null;
+    const currentArea = areaSelect ? areaSelect.value : null;
+    const currentDistrict = districtSelect ? districtSelect.value : null;
+
+    // If cities already populated server-side and not forced, skip network call
+    if (!force && citySelect && citySelect.options && citySelect.options.length > 1) {
+        return;
+    }
+
+    if (citySelect) citySelect.innerHTML = '<option value="">Select City</option>';
+    if (areaSelect) areaSelect.innerHTML = '<option value="">Select Area</option>';
+    if (districtSelect) districtSelect.innerHTML = '<option value="">Select District</option>';
+    if (pincodeSelect) pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
+
     if (!stateId) return;
-    
-    fetch(`/admin/api/locations/cities?state_id=${stateId}`)
+
+    fetch(`/admin/api/locations/cities?state_id=${stateId}`, { credentials: 'same-origin' })
         .then(response => response.json())
         .then(cities => {
             cities.forEach(city => {
@@ -962,7 +967,7 @@ function loadCities() {
             });
         });
 
-    fetch(`/admin/api/locations/districts?state_id=${stateId}`)
+    fetch(`/admin/api/locations/districts?state_id=${stateId}`, { credentials: 'same-origin' })
         .then(response => response.json())
         .then(districts => {
             districts.forEach(district => {
