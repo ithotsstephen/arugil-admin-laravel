@@ -12,9 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // If businesses have pincode_id, copy the related code into businesses.pincode
-        if (Schema::hasTable('businesses') && Schema::hasTable('pincodes')) {
-            if (Schema::hasColumn('businesses', 'pincode_id')) {
+        // Ensure businesses table has a pincode column to receive migrated values
+        if (Schema::hasTable('businesses')) {
+            if (! Schema::hasColumn('businesses', 'pincode')) {
+                Schema::table('businesses', function (Blueprint $table) {
+                    $table->string('pincode', 20)->nullable()->after('area_id');
+                });
+            }
+
+            // If businesses have pincode_id, copy the related code into businesses.pincode
+            if (Schema::hasTable('pincodes') && Schema::hasColumn('businesses', 'pincode_id')) {
                 $businesses = DB::table('businesses')->whereNotNull('pincode_id')->get();
                 foreach ($businesses as $b) {
                     $code = DB::table('pincodes')->where('id', $b->pincode_id)->value('code');
