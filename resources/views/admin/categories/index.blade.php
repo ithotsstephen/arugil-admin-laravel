@@ -8,6 +8,12 @@
     </div>
 </div>
 
+<style>
+    .drag-handle { cursor: grab; width: 28px; text-align: center; }
+    .drag-handle:active { cursor: grabbing; }
+    tr.dragging { opacity: 0.6; }
+</style>
+
 @if(session('status'))
     <div class="status">{{ session('status') }}</div>
 @endif
@@ -36,6 +42,7 @@
 <table>
     <thead>
     <tr>
+        <th></th>
         <th>Name</th>
         <th>Icon</th>
         <th>Parent</th>
@@ -46,6 +53,7 @@
     <tbody id="categoriesTbody">
     @forelse($categories as $category)
         <tr draggable="true" data-id="{{ $category->id }}" data-parent="" style="background: #f9fafb;">
+            <td class="drag-handle">☰</td>
             <td><strong>{{ $category->name }}</strong></td>
             <td>
                 @if(!empty($category->icon_svg))
@@ -67,6 +75,7 @@
         </tr>
         @foreach($category->children as $child)
             <tr draggable="true" data-id="{{ $child->id }}" data-parent="{{ $category->id }}">
+                <td class="drag-handle">☰</td>
                 <td style="padding-left: 30px;">↳ {{ $child->name }}</td>
                 <td>
                     @if(!empty($child->icon_svg))
@@ -131,7 +140,11 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
     let dragEl = null;
 
     tbody.addEventListener('dragstart', (e) => {
-        dragEl = e.target.closest('tr');
+        // only allow dragging when started from the drag-handle
+        const handle = e.target.closest('.drag-handle');
+        if (!handle) { e.preventDefault(); return; }
+        dragEl = handle.closest('tr');
+        dragEl.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
     });
 
@@ -150,6 +163,7 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
 
     tbody.addEventListener('drop', (e) => {
         e.preventDefault();
+        if (dragEl) { dragEl.classList.remove('dragging'); }
         sendOrder();
     });
 
