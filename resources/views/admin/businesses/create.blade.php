@@ -758,8 +758,7 @@ function loadAreas() {
                 areaSelect.appendChild(option);
             });
 
-            // Keep pincode independent: load pincodes filtered by selected city/district
-            loadPincodes(cityId || null, districtId || null);
+            // Keep pincode independent: do not filter by city/district here
         });
 }
 
