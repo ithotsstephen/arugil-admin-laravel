@@ -56,7 +56,7 @@
             <td>—</td>
             <td>{{ $category->sort_order }}</td>
             <td class="actions">
-                <button class="btn" onclick="editCategory({{ $category->id }}, @json($category->name), @json($category->icon), @json($category->icon_svg), {{ $category->sort_order }})">Edit</button>
+                <button class="btn" onclick='editCategory({{ $category->id }}, @json($category->name), @json($category->icon), @json($category->icon_svg), {{ $category->sort_order }})'>Edit</button>
                 <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" style="display: inline;">
                     @csrf
                     @method('DELETE')
@@ -77,7 +77,7 @@
                 <td>{{ $category->name }}</td>
                 <td>{{ $child->sort_order }}</td>
                 <td class="actions">
-                    <button class="btn" onclick="editCategory({{ $child->id }}, @json($child->name), @json($child->icon), @json($child->icon_svg), {{ $child->sort_order }}, {{ $child->parent_id }})">Edit</button>
+                    <button class="btn" onclick='editCategory({{ $child->id }}, @json($child->name), @json($child->icon), @json($child->icon_svg), {{ $child->sort_order }}, {{ $child->parent_id }})'>Edit</button>
                     <form method="POST" action="{{ route('admin.categories.destroy', $child) }}" style="display: inline;">
                         @csrf
                         @method('DELETE')
@@ -104,9 +104,8 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
     // Clear file input when editing
     const fileInput = form.querySelector('input[name="icon_file"]');
     if (fileInput) { fileInput.value = null; }
-    if (parent) {
-        form.querySelector('select[name="parent_id"]').value = parent;
-    }
+    // Always set parent select; use empty string for main categories
+    form.querySelector('select[name="parent_id"]').value = parent ?? '';
     form.action = '/admin/categories/' + id;
     let method = form.querySelector('input[name="_method"]');
     if (!method) {
