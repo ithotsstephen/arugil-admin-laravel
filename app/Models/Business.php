@@ -40,6 +40,9 @@ class Business extends Model
         'owner_image_url',
         'pincode',
         'pincode_id',
+        'is_approved',
+        'is_featured',
+        'expiry_date',
     ];
 
     protected $casts = [
