@@ -34,6 +34,18 @@ Route::get('/login', [LoginController::class, 'show'])->name('login')->middlewar
 Route::post('/login', [LoginController::class, 'store'])->name('login.store')->middleware('guest');
 Route::post('/logout', [LoginController::class, 'destroy'])->name('logout')->middleware('auth');
 
+// Mobile user auth (simple views for mobile users)
+use App\Http\Controllers\Auth\MobileAuthController;
+
+Route::get('/mobile/register', [MobileAuthController::class, 'showRegister'])->name('mobile.register');
+Route::post('/mobile/register', [MobileAuthController::class, 'register'])->name('mobile.register.post');
+Route::get('/mobile/login', [MobileAuthController::class, 'showLogin'])->name('mobile.login');
+Route::post('/mobile/login', [MobileAuthController::class, 'login'])->name('mobile.login.post');
+Route::post('/mobile/logout', [MobileAuthController::class, 'logout'])->name('mobile.logout');
+Route::get('/mobile/forgot', [MobileAuthController::class, 'showForgot'])->name('mobile.forgot');
+Route::post('/mobile/forgot/send', [MobileAuthController::class, 'sendOtp'])->name('mobile.forgot.send');
+Route::post('/mobile/forgot/verify', [MobileAuthController::class, 'verifyOtp'])->name('mobile.forgot.verify');
+
 // Social auth redirects/callbacks (web)
 Route::get('/auth/redirect/{provider}', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'redirect'])->name('social.redirect');
 Route::get('/auth/callback/{provider}', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'callback'])->name('social.callback');

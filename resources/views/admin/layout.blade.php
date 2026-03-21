@@ -87,5 +87,23 @@
         @yield('content')
     </main>
 </div>
+
+<div id="globalToast" class="toast" role="status" aria-live="polite" style="display:none;right:20px;bottom:20px;position:fixed;z-index:1200;padding:10px 14px;border-radius:8px;color:#fff;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.2);"></div>
+
+<script>
+    // Simple global toast helper for admin pages: showToast(message, type = 'success'|'error')
+    function showToast(message, type = 'success') {
+        const t = document.getElementById('globalToast');
+        if (!t) return;
+        t.textContent = message;
+        t.className = 'toast';
+        if (type === 'success') t.style.background = '#065f46';
+        else if (type === 'error') t.style.background = '#7f1d1d';
+        else t.style.background = '#111827';
+        t.style.display = 'block';
+        clearTimeout(window._globalToastTimeout);
+        window._globalToastTimeout = setTimeout(() => { t.style.display = 'none'; }, 2500);
+    }
+</script>
 </body>
 </html>
