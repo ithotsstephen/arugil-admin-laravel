@@ -8,10 +8,31 @@
     </div>
 </div>
 
+<div style="margin-bottom:12px;display:flex;align-items:center;gap:12px;">
+    <button id="saveOrderBtn" class="btn btn-primary" disabled>Save Order</button>
+    <span id="orderStatus" style="color:#b45309;display:none;font-weight:600">Unsaved changes</span>
+    <span id="orderSaved" style="color:#15803d;display:none;font-weight:600">Saved</span>
+</div>
+
 <style>
     .drag-handle { cursor: grab; width: 28px; text-align: center; }
     .drag-handle:active { cursor: grabbing; }
     tr.dragging { opacity: 0.6; }
+    .toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background: #111827;
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        font-weight:600;
+        display:none;
+        z-index: 1200;
+    }
+    .toast.success { background: #065f46; }
+    .toast.error { background: #7f1d1d; }
 </style>
 
 @if(session('status'))
@@ -104,6 +125,8 @@
     </tbody>
 </table>
 
+<div id="orderToast" class="toast" role="status" aria-live="polite"></div>
+
     <script>
 function editCategory(id, name, icon, icon_svg, sort, parent = null) {
     const form = document.getElementById('categoryForm');
@@ -135,9 +158,27 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
 </script>
 <script>
 // Drag and drop ordering — move parent together with its children
-(() => {
+(function () {
     const tbody = document.getElementById('categoriesTbody');
+    const saveBtn = document.getElementById('saveOrderBtn');
+    const statusEl = document.getElementById('orderStatus');
     let dragGroup = [];
+    let dirty = false;
+
+    const savedEl = document.getElementById('orderSaved');
+
+    function markDirty(v = true) {
+        dirty = v;
+        if (dirty) {
+            saveBtn.disabled = false;
+            statusEl.style.display = 'inline';
+            if (savedEl) savedEl.style.display = 'none';
+        } else {
+            saveBtn.disabled = true;
+            statusEl.style.display = 'none';
+            if (savedEl) savedEl.style.display = 'none';
+        }
+    }
 
     function findGroupFor(tr) {
         const group = [tr];
@@ -173,28 +214,27 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
         const parent = tr.parentNode;
 
         if (after) {
-            // insert group after target
             parent.insertBefore(dragGroup[0], tr.nextSibling);
-            // ensure all group rows follow in order
             for (let i = 1; i < dragGroup.length; i++) {
                 parent.insertBefore(dragGroup[i], dragGroup[i-1].nextSibling);
             }
         } else {
-            // insert group before target
             parent.insertBefore(dragGroup[0], tr);
             for (let i = 1; i < dragGroup.length; i++) {
                 parent.insertBefore(dragGroup[i], dragGroup[i-1].nextSibling);
             }
         }
-
-        // (no parent-change on drop; only reorder)
+        // Mark as dirty immediately when DOM order changes during drag.
+        // Some browsers may not reliably fire `drop` — enable Save proactively.
+        markDirty(true);
     });
 
     tbody.addEventListener('drop', (e) => {
         e.preventDefault();
         dragGroup.forEach(r => r.classList.remove('dragging'));
         dragGroup = [];
-        sendOrder();
+        // mark as changed, let user click Save
+        markDirty(true);
     });
 
     tbody.addEventListener('dragend', (e) => {
@@ -202,12 +242,50 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
         dragGroup = [];
     });
 
+    saveBtn.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        if (!dirty) return;
+        sendOrder();
+    });
+
     function sendOrder() {
         const rows = Array.from(tbody.querySelectorAll('tr'));
-        const order = rows.map(r => ({ id: parseInt(r.dataset.id, 10), parent_id: r.dataset.parent ? (r.dataset.parent === '' ? null : parseInt(r.dataset.parent, 10)) : null }));
+
+        // Recompute parent relationships based on DOM order.
+        // We'll treat any row that appears as a top-level (no indentation) row
+        // as a parent; subsequent rows until the next parent are its children.
+        const order = [];
+        let currentParent = null;
+        rows.forEach(r => {
+            const id = parseInt(r.dataset.id, 10);
+            // A top-level parent row is indicated in the original markup by
+            // an empty string for data-parent; use the DOM order instead of
+            // relying on the possibly stale dataset value.
+            const originallyParent = !r.dataset.parent || r.dataset.parent === '';
+            if (originallyParent) {
+                currentParent = id;
+                // ensure dataset marks it as a parent
+                r.dataset.parent = '';
+                order.push({ id, parent_id: null });
+            } else {
+                // child row — attach to the most recent parent found in DOM
+                const parent_id = currentParent ? currentParent : null;
+                r.dataset.parent = parent_id ? String(parent_id) : '';
+                order.push({ id, parent_id: parent_id });
+            }
+        });
 
         const tokenMeta = document.querySelector('meta[name="csrf-token"]');
         const csrfToken = tokenMeta ? tokenMeta.getAttribute('content') : (document.querySelector('input[name="_token"]') ? document.querySelector('input[name="_token"]').value : '');
+
+        // Disable further interaction while saving
+        saveBtn.disabled = true;
+        tbody.querySelectorAll('tr').forEach(r => r.setAttribute('draggable', 'false'));
+
+        // prefer global toast if available
+        const hasGlobalToast = (typeof showToast === 'function');
+        const localToast = document.getElementById('orderToast');
+        if (!hasGlobalToast && localToast) { localToast.style.display = 'none'; localToast.className = 'toast'; }
 
         fetch('{{ route('admin.categories.reorder') }}', {
             method: 'POST',
@@ -218,9 +296,48 @@ function editCategory(id, name, icon, icon_svg, sort, parent = null) {
             body: JSON.stringify({ order })
         }).then(r => r.json()).then(data => {
             if (!data.success) {
-                alert('Failed to save order');
+                if (hasGlobalToast) { showToast('Failed to save order', 'error'); }
+                else if (localToast) { localToast.textContent = 'Failed to save order'; localToast.classList.add('error'); localToast.style.display = 'block'; }
+                // re-enable dragging
+                tbody.querySelectorAll('tr').forEach(r => r.setAttribute('draggable', 'true'));
+                saveBtn.disabled = false;
+                return;
             }
-        }).catch(() => alert('Failed to save order'));
+
+            // Update sort_order column in the UI: assign index per parent group
+            const groups = {};
+            rows.forEach(r => {
+                const pid = r.dataset.parent === '' ? null : (r.dataset.parent ? r.dataset.parent : null);
+                if (!groups[pid]) groups[pid] = [];
+                groups[pid].push(r);
+            });
+
+            Object.keys(groups).forEach(pid => {
+                groups[pid].forEach((r, idx) => {
+                    const td = r.querySelectorAll('td')[4];
+                    if (td) td.textContent = idx;
+                });
+            });
+
+            markDirty(false);
+            // show saved confirmation briefly
+            if (savedEl) {
+                savedEl.style.display = 'inline';
+                setTimeout(() => { savedEl.style.display = 'none'; }, 2000);
+            }
+
+            if (hasGlobalToast) { showToast('Order saved', 'success'); }
+            else if (localToast) { localToast.textContent = 'Order saved'; localToast.classList.add('success'); localToast.style.display = 'block'; setTimeout(() => { localToast.style.display = 'none'; }, 2000); }
+
+            // re-enable dragging
+            tbody.querySelectorAll('tr').forEach(r => r.setAttribute('draggable', 'true'));
+            saveBtn.disabled = false;
+        }).catch(() => {
+            if (hasGlobalToast) { showToast('Failed to save order', 'error'); }
+            else if (localToast) { localToast.textContent = 'Failed to save order'; localToast.classList.add('error'); localToast.style.display = 'block'; }
+            tbody.querySelectorAll('tr').forEach(r => r.setAttribute('draggable', 'true'));
+            saveBtn.disabled = false;
+        });
     }
 })();
 </script>
