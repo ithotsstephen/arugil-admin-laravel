@@ -242,6 +242,11 @@
             border-color: var(--primary);
         }
 
+        /* header auth buttons */
+        .auth { display:flex; gap:12px; align-items:center; }
+        .btn-link { background: transparent; border: none; color: var(--text); cursor: pointer; text-decoration: none; font-weight:600; }
+        .btn-primary { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 8px 12px; font-weight:600; text-decoration:none; }
+
         .pagination .active {
             background: var(--primary);
             color: white;
@@ -286,6 +291,19 @@
                 <a href="/offers">Offers</a>
                 <a href="/admin">Admin</a>
             </nav>
+
+            <div class="auth">
+                @guest
+                    <a class="btn-link" href="{{ route('mobile.login') }}">Login</a>
+                    <a class="btn-primary" href="{{ route('mobile.register') }}">Register</a>
+                @else
+                    <span style="margin-right:6px">{{ auth()->user()->name }}</span>
+                    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+                        @csrf
+                        <button class="btn-link" type="submit">Logout</button>
+                    </form>
+                @endguest
+            </div>
         </div>
     </nav>
 

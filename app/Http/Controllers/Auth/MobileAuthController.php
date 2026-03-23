@@ -22,35 +22,138 @@ class MobileAuthController extends Controller
     {
         $data = $request->validate([
             'full_name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:mobile_users,email',
+            'email' => 'nullable|email',
             'phone' => 'nullable|string|max:50',
             'password' => 'required|string|min:6|confirmed'
         ]);
 
         $data['password'] = Hash::make($data['password']);
+        // ensure email (if provided) is not already used
+        if (!empty($data['email'])) {
+            $exists = User::where('email', $data['email'])->exists();
+            if ($exists) {
+                return back()->withErrors(['email' => 'Email already in use']);
+            }
+        }
 
-        // create / sync into main users table so admin mobile users module shows it
+        // cache registration data until OTP verification
+        if (!empty($data['email'])) {
+            Cache::put('register_data:' . $data['email'], [
+                'full_name' => $data['full_name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
+                'password' => $data['password'],
+            ], now()->addMinutes(30));
+
+            // generate and send registration OTP (10 minutes)
+            $otp = rand(100000, 999999);
+            Cache::put('register_otp:' . $data['email'], (string)$otp, now()->addMinutes(10));
+
+            try {
+                Mail::raw("Your registration OTP: {$otp}", function ($m) use ($data) {
+                    $m->to($data['email'])->subject('Complete your registration');
+                });
+            } catch (\Throwable $e) {
+                // ignore send failures; user can request resend
+            }
+
+            return redirect()->route('mobile.register.verify')->with('email', $data['email'])->with('status', 'OTP sent to your email. Please verify to complete registration.');
+        }
+
+        // If no email provided, create user immediately (phone-only registration)
         $u = User::create([
             'name' => $data['full_name'],
-            'email' => $data['email'] ?? null,
+            'email' => null,
             'phone' => $data['phone'] ?? null,
             'password' => $data['password'],
             'role' => 'user',
             'status' => 'active',
         ]);
 
-        // optional: also store into mobile_users table for backward compatibility
         MobileUser::create([
             'full_name' => $data['full_name'],
-            'email' => $data['email'] ?? null,
+            'email' => null,
             'phone' => $data['phone'] ?? null,
             'password' => $data['password'],
         ]);
 
-        // log the user in
         auth()->loginUsingId($u->id);
 
         return redirect('/')->with('status', 'Registered and logged in');
+    }
+
+    public function showRegisterVerify(Request $request)
+    {
+        $email = session('email') ?? $request->query('email');
+        return view('auth.mobile_register_verify', compact('email'));
+    }
+
+    public function verifyRegistrationOtp(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|string',
+        ]);
+        $cachedOtp = Cache::get('register_otp:' . $data['email']);
+        if (!$cachedOtp || $cachedOtp !== $data['otp']) {
+            return back()->withErrors(['otp' => 'Invalid or expired OTP']);
+        }
+
+        $reg = Cache::get('register_data:' . $data['email']);
+        if (!$reg) {
+            return back()->withErrors(['email' => 'No pending registration found for this email']);
+        }
+
+        // create the user now
+        $user = User::create([
+            'name' => $reg['full_name'],
+            'email' => $reg['email'],
+            'phone' => $reg['phone'] ?? null,
+            'password' => $reg['password'],
+            'role' => 'user',
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+
+        // optional mobile_users record
+        MobileUser::create([
+            'full_name' => $reg['full_name'],
+            'email' => $reg['email'],
+            'phone' => $reg['phone'] ?? null,
+            'password' => $reg['password'],
+        ]);
+
+        Cache::forget('register_otp:' . $data['email']);
+        Cache::forget('register_data:' . $data['email']);
+
+        auth()->loginUsingId($user->id);
+
+        return redirect('/')->with('status', 'Registration complete — welcome!');
+    }
+
+    public function resendRegistrationOtp(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $reg = Cache::get('register_data:' . $data['email']);
+        if (!$reg) {
+            return back()->withErrors(['email' => 'No pending registration found for this email']);
+        }
+
+        $otp = rand(100000, 999999);
+        Cache::put('register_otp:' . $data['email'], (string)$otp, now()->addMinutes(10));
+
+        try {
+            Mail::raw("Your registration OTP: {$otp}", function ($m) use ($data) {
+                $m->to($data['email'])->subject('Complete your registration');
+            });
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        return redirect()->back()->with('status', 'OTP resent to your email');
     }
 
     public function showLogin()

@@ -41,6 +41,15 @@ $app->singleton(
     App\Exceptions\Handler::class
 );
 
+// Ensure Spatie's SolutionProviderRepository contract is bound early so
+// Ignition/Flare can resolve it when rendering exceptions. This helps
+// avoid EntryNotFoundException during error page rendering.
+if (class_exists(\Spatie\ErrorSolutions\SolutionProviderRepository::class)
+    && class_exists(\Spatie\ErrorSolutions\Contracts\SolutionProviderRepository::class)) {
+    $app->singleton(\Spatie\ErrorSolutions\Contracts\SolutionProviderRepository::class, function () {
+        return new \Spatie\ErrorSolutions\SolutionProviderRepository();
+    });
+}
 /*
 |--------------------------------------------------------------------------
 | Return The Application

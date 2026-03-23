@@ -39,6 +39,9 @@ use App\Http\Controllers\Auth\MobileAuthController;
 
 Route::get('/mobile/register', [MobileAuthController::class, 'showRegister'])->name('mobile.register');
 Route::post('/mobile/register', [MobileAuthController::class, 'register'])->name('mobile.register.post');
+Route::get('/mobile/register/verify', [MobileAuthController::class, 'showRegisterVerify'])->name('mobile.register.verify');
+Route::post('/mobile/register/verify', [MobileAuthController::class, 'verifyRegistrationOtp'])->name('mobile.register.verify.post');
+Route::post('/mobile/register/resend', [MobileAuthController::class, 'resendRegistrationOtp'])->name('mobile.register.resend');
 Route::get('/mobile/login', [MobileAuthController::class, 'showLogin'])->name('mobile.login');
 Route::post('/mobile/login', [MobileAuthController::class, 'login'])->name('mobile.login.post');
 Route::post('/mobile/logout', [MobileAuthController::class, 'logout'])->name('mobile.logout');
@@ -64,6 +67,7 @@ Route::prefix('admin')
             Route::post('/users', [UsersController::class, 'store'])->name('users.store');
             Route::get('/users/{user}/edit', [UsersController::class, 'edit'])->name('users.edit');
             Route::put('/users/{user}', [UsersController::class, 'update'])->name('users.update');
+            Route::delete('/users/{user}', [UsersController::class, 'destroy'])->name('users.destroy');
             Route::get('/categories', [CategoriesController::class, 'index'])->name('categories.index');
             Route::post('/categories', [CategoriesController::class, 'store'])->name('categories.store');
             Route::post('/categories/reorder', [CategoriesController::class, 'reorder'])->name('categories.reorder');

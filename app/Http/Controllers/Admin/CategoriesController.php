@@ -37,13 +37,21 @@ class CategoriesController extends Controller
         // group by parent_id to assign sort_order within each parent
         $groups = [];
         foreach ($items as $item) {
-            $parent = $item['parent_id'] ?? null;
+            // ensure empty strings are treated as null
+            $parent = null;
+            if (array_key_exists('parent_id', $item) && $item['parent_id'] !== '') {
+                $parent = is_numeric($item['parent_id']) ? (int) $item['parent_id'] : null;
+            }
+
+            // use the parent (null will become an empty string key in PHP arrays)
             $groups[$parent][] = $item['id'];
         }
 
         foreach ($groups as $parent => $ids) {
             foreach ($ids as $index => $id) {
-                Category::where('id', $id)->update(['sort_order' => $index, 'parent_id' => $parent]);
+                // when iterating, array key for null parent becomes empty string — coerce to null
+                $parentIdForUpdate = $parent === '' ? null : $parent;
+                Category::where('id', $id)->update(['sort_order' => $index, 'parent_id' => $parentIdForUpdate]);
             }
         }
 
