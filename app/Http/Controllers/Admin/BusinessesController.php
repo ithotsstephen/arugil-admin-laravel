@@ -100,7 +100,12 @@ class BusinessesController extends Controller
         $categories = \App\Models\Category::with('children')->whereNull('parent_id')->get();
         $states = \App\Models\State::orderBy('name')->get();
         $areas = collect();
-        $pincodes = \App\Models\Pincode::orderBy('code')->get();
+        // pincodes table was removed in some migration paths; guard the query
+        if (\Illuminate\Support\Facades\Schema::hasTable('pincodes')) {
+            $pincodes = \App\Models\Pincode::orderBy('code')->get();
+        } else {
+            $pincodes = collect();
+        }
         return view('admin.businesses.create', compact('categories', 'states', 'areas', 'pincodes'));
     }
 
@@ -159,9 +164,11 @@ class BusinessesController extends Controller
 
         // If pincode_id provided, set the human-readable pincode string for backward compatibility
         if (isset($fields['pincode_id']) && $fields['pincode_id']) {
-            $code = DB::table('pincodes')->where('id', $fields['pincode_id'])->value('code');
-            if ($code) {
-                $fields['pincode'] = $code;
+            if (\Illuminate\Support\Facades\Schema::hasTable('pincodes')) {
+                $code = DB::table('pincodes')->where('id', $fields['pincode_id'])->value('code');
+                if ($code) {
+                    $fields['pincode'] = $code;
+                }
             }
         }
 

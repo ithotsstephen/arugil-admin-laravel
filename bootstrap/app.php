@@ -49,6 +49,19 @@ if (class_exists(\Spatie\ErrorSolutions\SolutionProviderRepository::class)
     $app->singleton(\Spatie\ErrorSolutions\Contracts\SolutionProviderRepository::class, function () {
         return new \Spatie\ErrorSolutions\SolutionProviderRepository();
     });
+    // Also bind into Spatie\FlareClient's container so Ignition (which may use
+    // its own container instance) can resolve the contract when rendering
+    // exceptions outside of the Laravel container.
+    if (class_exists(\Spatie\FlareClient\Support\Container::class)) {
+        try {
+            \Spatie\FlareClient\Support\Container::instance()->singleton(
+                \Spatie\ErrorSolutions\Contracts\SolutionProviderRepository::class,
+                fn () => new \Spatie\ErrorSolutions\SolutionProviderRepository()
+            );
+        } catch (\Throwable $e) {
+            // Non-fatal: if Flare's container can't be customized, ignore.
+        }
+    }
 }
 /*
 |--------------------------------------------------------------------------
