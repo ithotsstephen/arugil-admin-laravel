@@ -802,22 +802,28 @@ async function saveSection(section) {
         formData.append('business_id', businessIdInput.value);
     }
 
-    inputs.forEach(container => {
-        // find form controls inside
-        container.querySelectorAll('input, select, textarea').forEach(el => {
-            if (!el.name) return;
-            if (el.type === 'file') {
-                if (el.files && el.files.length) {
-                    // For multiple files, append first file per field
-                    formData.append(el.name, el.files[0]);
-                }
-            } else if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) {
-                // skip unchecked
-                return;
-            } else {
-                formData.append(el.name, el.value);
+    const appendControl = (el) => {
+        if (!el.name) return;
+        if (el.type === 'file') {
+            if (el.files && el.files.length) {
+                formData.append(el.name, el.files[0]);
             }
-        });
+        } else if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) {
+            // skip unchecked
+        } else {
+            formData.append(el.name, el.value);
+        }
+    };
+
+    inputs.forEach(container => {
+        // If the container itself is a form control (e.g. a bare <input> or <select> sibling),
+        // capture it directly — querySelectorAll only finds descendants, not the element itself.
+        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(container.tagName)) {
+            appendControl(container);
+            return;
+        }
+        // Otherwise find form controls inside the wrapper element
+        container.querySelectorAll('input, select, textarea').forEach(appendControl);
     });
 
     try {

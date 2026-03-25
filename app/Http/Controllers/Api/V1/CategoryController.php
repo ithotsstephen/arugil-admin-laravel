@@ -21,7 +21,12 @@ class CategoryController extends Controller
 
     public function businesses(Request $request, Category $category)
     {
-        $businesses = $category->businesses()
+        // Collect the category itself and all its direct subcategories
+        $categoryIds = Category::where('id', $category->id)
+            ->orWhere('parent_id', $category->id)
+            ->pluck('id');
+
+        $businesses = \App\Models\Business::whereIn('category_id', $categoryIds)
             ->where('is_approved', true)
             ->where(function($query) {
                 $query->whereNull('expiry_date')

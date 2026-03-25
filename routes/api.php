@@ -26,6 +26,8 @@ Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
+        Route::post('verify-otp', [AuthController::class, 'verifyRegistrationOtp']);
+        Route::post('resend-otp', [AuthController::class, 'resendRegistrationOtp']);
         Route::post('social', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'token']);
         Route::post('verify-widget-token', [AuthController::class, 'verifyWidgetToken']);
     });

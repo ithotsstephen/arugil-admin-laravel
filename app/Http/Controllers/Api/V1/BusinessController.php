@@ -51,7 +51,11 @@ class BusinessController extends Controller
 
             $categoryId = $filters['category'] ?? $request->input('category_id');
             if ($categoryId) {
-                $query->where('category_id', (int) $categoryId);
+                // Include businesses in the category AND all its subcategories
+                $categoryIds = \App\Models\Category::where('id', (int) $categoryId)
+                    ->orWhere('parent_id', (int) $categoryId)
+                    ->pluck('id');
+                $query->whereIn('category_id', $categoryIds);
             }
 
             // Normalize featured boolean from filter[...] or top-level param

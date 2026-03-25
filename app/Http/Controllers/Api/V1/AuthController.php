@@ -69,6 +69,94 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out']);
     }
 
+    public function verifyRegistrationOtp(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|string',
+        ]);
+
+        $cachedOtp = \Illuminate\Support\Facades\Cache::get('register_otp:' . $data['email']);
+        if (!$cachedOtp || $cachedOtp !== $data['otp']) {
+            throw ValidationException::withMessages([
+                'otp' => ['Invalid or expired OTP'],
+            ]);
+        }
+
+        $reg = \Illuminate\Support\Facades\Cache::get('register_data:' . $data['email']);
+        if (!$reg) {
+            throw ValidationException::withMessages([
+                'email' => ['No pending registration found for this email'],
+            ]);
+        }
+
+        $user = User::where('email', $reg['email'])->first();
+
+        if (!$user) {
+            $user = User::create([
+                'name' => $reg['full_name'],
+                'email' => $reg['email'],
+                'phone' => $reg['phone'] ?? null,
+                'password' => $reg['password'],
+                'role' => 'user',
+                'status' => 'active',
+                'email_verified_at' => now(),
+            ]);
+        } else {
+            if (!$user->email_verified_at) {
+                $user->forceFill(['email_verified_at' => now()])->save();
+            }
+        }
+
+        \App\Models\MobileUser::updateOrCreate(
+            ['email' => $reg['email']],
+            [
+                'full_name' => $reg['full_name'],
+                'phone' => $reg['phone'] ?? null,
+                'password' => $reg['password'],
+                'email_verified_at' => now(),
+            ]
+        );
+
+        \Illuminate\Support\Facades\Cache::forget('register_otp:' . $data['email']);
+        \Illuminate\Support\Facades\Cache::forget('register_data:' . $data['email']);
+
+        $token = $user->createToken('api')->plainTextToken;
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token,
+            'message' => 'Email verified successfully',
+        ], 200);
+    }
+
+    public function resendRegistrationOtp(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $reg = \Illuminate\Support\Facades\Cache::get('register_data:' . $data['email']);
+        if (!$reg) {
+            throw ValidationException::withMessages([
+                'email' => ['No pending registration found for this email'],
+            ]);
+        }
+
+        $otp = rand(100000, 999999);
+        \Illuminate\Support\Facades\Cache::put('register_otp:' . $data['email'], (string)$otp, now()->addMinutes(10));
+
+        try {
+            \Illuminate\Support\Facades\Mail::raw("Your registration OTP: {$otp}", function ($m) use ($data) {
+                $m->to($data['email'])->subject('Complete your registration');
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Resend registration OTP email failed', ['email' => $data['email'], 'error' => $e->getMessage()]);
+        }
+
+        return response()->json(['message' => 'OTP resent to your email'], 200);
+    }
+
     /**
      * Verify MSG91 widget access token on the server side.
      * Expects JSON: { "access_token": "<jwt_from_widget>" }

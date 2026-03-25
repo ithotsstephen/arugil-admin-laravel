@@ -54,7 +54,7 @@ class MobileAuthController extends Controller
                     $m->to($data['email'])->subject('Complete your registration');
                 });
             } catch (\Throwable $e) {
-                // ignore send failures; user can request resend
+                \Illuminate\Support\Facades\Log::error('Registration OTP email send failed', ['email' => $data['email'], 'error' => $e->getMessage()]);
             }
 
             return redirect()->route('mobile.register.verify')->with('email', $data['email'])->with('status', 'OTP sent to your email. Please verify to complete registration.');
@@ -159,7 +159,7 @@ class MobileAuthController extends Controller
                 $m->to($data['email'])->subject('Complete your registration');
             });
         } catch (\Throwable $e) {
-            // ignore
+            \Illuminate\Support\Facades\Log::error('Resend registration OTP email failed', ['email' => $data['email'], 'error' => $e->getMessage()]);
         }
 
         return redirect()->back()->with('status', 'OTP resent to your email');
@@ -225,7 +225,7 @@ class MobileAuthController extends Controller
                 $m->to($user->email)->subject('Password reset OTP');
             });
         } catch (\Throwable $e) {
-            // ignore
+            \Illuminate\Support\Facades\Log::error('Password reset OTP email send failed', ['email' => $user->email, 'error' => $e->getMessage()]);
         }
 
         return redirect()->back()->with('status', 'OTP sent to your email');
