@@ -13,14 +13,29 @@ class BusinessController extends Controller
 {
     public function index(Request $request)
     {
+        // Validate inputs to avoid invalid or malicious values
+        $request->validate([
+            'q' => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:1|max:50',
+            'page' => 'nullable|integer|min:1',
+            'category_id' => 'nullable|integer',
+            'filter.category' => 'nullable|integer',
+            'featured' => 'nullable',
+            'filter.featured' => 'nullable',
+            'sort' => 'nullable|string|max:50',
+        ]);
+
         $cacheKey = 'business_search_' . md5($request->fullUrl());
 
-        // limit per_page to prevent excessive load
+        // limit per_page to prevent excessive load (validated already)
         $perPage = (int) $request->input('per_page', 15);
-        $perPage = max(1, min($perPage, 50));
+
+        // Default sort and whitelist allowed fields to prevent SQL injection
+        $sort = $request->input('sort', '-created_at');
+        $allowedSort = ['created_at', 'likes_count', 'name'];
 
         // Cache for 60 minutes
-        $result = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($request, $perPage) {
+        $result = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($request, $perPage, $sort, $allowedSort) {
             $query = Business::query()
                 ->where('is_approved', true)
                 ->where(function($q) {
@@ -69,31 +84,31 @@ class BusinessController extends Controller
                 }
             }
 
-            // Sorting: support -field desc syntax and friendly aliases
-            $sort = $request->string('sort')->toString();
-            if ($sort === 'latest') {
-                $sort = '-created_at';
-            } elseif ($sort === 'popular') {
-                $sort = '-likes_count';
-            } elseif ($sort === 'name') {
-                $sort = 'name';
+            // Sorting: support -field desc syntax and friendly aliases, but whitelist fields
+            $sortRequested = $sort;
+            if ($sortRequested === 'latest') {
+                $sortRequested = '-created_at';
+            } elseif ($sortRequested === 'popular') {
+                $sortRequested = '-likes_count';
+            } elseif ($sortRequested === 'name') {
+                $sortRequested = 'name';
             }
 
-            if ($sort) {
-                $direction = 'asc';
-                if (str_starts_with($sort, '-')) {
-                    $direction = 'desc';
-                    $sort = ltrim($sort, '-');
-                }
+            $direction = 'asc';
+            if (str_starts_with($sortRequested, '-')) {
+                $direction = 'desc';
+                $sortRequested = ltrim($sortRequested, '-');
+            }
 
-                // If sorting by likes_count ensure we have the count
-                if ($sort === 'likes_count') {
-                    $query->withCount('likes')->orderBy($sort, $direction);
-                } else {
-                    $query->orderBy($sort, $direction);
-                }
-            } else {
+            // If requested field is not allowed, fall back to created_at desc
+            if (!in_array($sortRequested, $allowedSort, true)) {
                 $query->orderByDesc('created_at');
+            } else {
+                if ($sortRequested === 'likes_count') {
+                    $query->withCount('likes')->orderBy($sortRequested, $direction);
+                } else {
+                    $query->orderBy($sortRequested, $direction);
+                }
             }
             $paginator = $query->with(['category', 'owner'])->withCount('likes')->paginate($perPage);
 

@@ -33,7 +33,7 @@ Route::prefix('v1')->group(function () {
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('categories/{category}/businesses', [CategoryController::class, 'businesses']);
 
-    Route::get('businesses', [BusinessController::class, 'index']);
+    Route::middleware('throttle:60,1')->get('businesses', [BusinessController::class, 'index']);
     Route::get('businesses/{business}', [BusinessController::class, 'show']);
     Route::get('featured', [BusinessController::class, 'featured']);
     Route::get('nearby', [BusinessController::class, 'nearby']);
