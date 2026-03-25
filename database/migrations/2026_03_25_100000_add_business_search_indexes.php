@@ -19,8 +19,8 @@ class AddBusinessSearchIndexes extends Migration
         DB::statement("CREATE INDEX IF NOT EXISTS businesses_name_trgm_idx ON businesses USING gin (LOWER(name) gin_trgm_ops);");
         DB::statement("CREATE INDEX IF NOT EXISTS businesses_description_trgm_idx ON businesses USING gin (LOWER(COALESCE(description, '')) gin_trgm_ops);");
 
-        // GIN index for json/array keywords (assumes `keywords` is jsonb or similar)
-        DB::statement("CREATE INDEX IF NOT EXISTS businesses_keywords_gin_idx ON businesses USING gin (keywords);");
+        // `keywords` is json in this schema; cast to jsonb for GIN indexing.
+        DB::statement("CREATE INDEX IF NOT EXISTS businesses_keywords_gin_idx ON businesses USING gin ((keywords::jsonb));");
 
         // Common filter/sort btree indexes
         DB::statement("CREATE INDEX IF NOT EXISTS businesses_category_id_idx ON businesses (category_id);");
