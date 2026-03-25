@@ -104,24 +104,33 @@ class MobileAuthController extends Controller
             return back()->withErrors(['email' => 'No pending registration found for this email']);
         }
 
-        // create the user now
-        $user = User::create([
-            'name' => $reg['full_name'],
-            'email' => $reg['email'],
-            'phone' => $reg['phone'] ?? null,
-            'password' => $reg['password'],
-            'role' => 'user',
-            'status' => 'active',
-            'email_verified_at' => now(),
-        ]);
+        $user = User::where('email', $reg['email'])->first();
 
-        // optional mobile_users record
-        MobileUser::create([
-            'full_name' => $reg['full_name'],
-            'email' => $reg['email'],
-            'phone' => $reg['phone'] ?? null,
-            'password' => $reg['password'],
-        ]);
+        if (!$user) {
+            $user = User::create([
+                'name' => $reg['full_name'],
+                'email' => $reg['email'],
+                'phone' => $reg['phone'] ?? null,
+                'password' => $reg['password'],
+                'role' => 'user',
+                'status' => 'active',
+                'email_verified_at' => now(),
+            ]);
+        } else {
+            if (!$user->email_verified_at) {
+                $user->forceFill(['email_verified_at' => now()])->save();
+            }
+        }
+
+        MobileUser::updateOrCreate(
+            ['email' => $reg['email']],
+            [
+                'full_name' => $reg['full_name'],
+                'phone' => $reg['phone'] ?? null,
+                'password' => $reg['password'],
+                'email_verified_at' => now(),
+            ]
+        );
 
         Cache::forget('register_otp:' . $data['email']);
         Cache::forget('register_data:' . $data['email']);
