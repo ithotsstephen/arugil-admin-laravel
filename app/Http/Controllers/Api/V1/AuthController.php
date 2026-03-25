@@ -115,7 +115,7 @@ class AuthController extends Controller
                     foreach ($searchKeys as $k) {
                         if (!empty($body['data'][$k])) {
                             $phone = (string) $body['data'][$k];
-                            break 2;
+                            break;
                         }
                     }
                 }

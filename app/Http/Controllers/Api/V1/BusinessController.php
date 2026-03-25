@@ -66,7 +66,7 @@ class BusinessController extends Controller
         return response()->json($businesses);
     }
 
-    public function show(Business $business)
+    public function show(\Illuminate\Http\Request $request, Business $business)
     {
         if (!$business->is_approved || $business->isExpired()) {
             return response()->json(['message' => 'Business not available.'], 403);
@@ -75,8 +75,7 @@ class BusinessController extends Controller
         $business->increment('views');
         $business->load(['category', 'owner', 'images', 'reviews', 'products']);
         $business->loadCount('likes');
-
-        $user = $request->user();
+            $user = $request->user();
         $payload = $business->toArray();
         $payload['liked_by_user'] = $business->isLikedBy($user);
 

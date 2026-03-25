@@ -1,13 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AdController;
-use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BusinessController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmergencyController;
 use App\Http\Controllers\Api\V1\JobController;
 use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -33,8 +33,8 @@ Route::prefix('v1')->group(function () {
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('categories/{category}/businesses', [CategoryController::class, 'businesses']);
 
-    Route::get('businesses', [BusinessController::class, 'index']);
-    Route::get('business/{business}', [BusinessController::class, 'show']);
+        Route::get('business', [BusinessController::class, 'index']);
+        Route::get('business/{business}', [BusinessController::class, 'show']);
     Route::get('featured', [BusinessController::class, 'featured']);
     Route::get('nearby', [BusinessController::class, 'nearby']);
 
