@@ -33,19 +33,18 @@ Route::prefix('v1')->group(function () {
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('categories/{category}/businesses', [CategoryController::class, 'businesses']);
 
-        Route::get('business', [BusinessController::class, 'index']);
-        Route::get('business/{business}', [BusinessController::class, 'show']);
+    Route::get('businesses', [BusinessController::class, 'index']);
+    Route::get('businesses/{business}', [BusinessController::class, 'show']);
     Route::get('featured', [BusinessController::class, 'featured']);
     Route::get('nearby', [BusinessController::class, 'nearby']);
-
-    Route::get('business/{business}/reviews', [ReviewController::class, 'index']);
-    Route::get('business/{business}/products', [\App\Http\Controllers\Api\V1\ProductController::class, 'index']);
-    Route::get('business/{business}/products/{product}', [\App\Http\Controllers\Api\V1\ProductController::class, 'show']);
+    Route::get('businesses/{business}/reviews', [ReviewController::class, 'index']);
+    Route::get('businesses/{business}/products', [\App\Http\Controllers\Api\V1\ProductController::class, 'index']);
+    Route::get('businesses/{business}/products/{product}', [\App\Http\Controllers\Api\V1\ProductController::class, 'show']);
     Route::get('jobs', [JobController::class, 'index']);
     Route::get('ads', [AdController::class, 'index']);
     Route::post('ads/{ad}/click', [AdController::class, 'click']);
     Route::get('emergency', [EmergencyController::class, 'index']);
-    Route::get('business/{business}/payments', [PaymentController::class, 'index']);
+    Route::get('businesses/{business}/payments', [PaymentController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('user', function (Request $request) {
@@ -54,13 +53,13 @@ Route::prefix('v1')->group(function () {
 
         Route::post('auth/logout', [AuthController::class, 'logout']);
 
-        Route::post('business', [BusinessController::class, 'store']);
-        Route::put('business/{business}', [BusinessController::class, 'update']);
-        Route::post('business/{business}/products', [\App\Http\Controllers\Api\V1\ProductController::class, 'store']);
-        Route::put('business/{business}/products/{product}', [\App\Http\Controllers\Api\V1\ProductController::class, 'update']);
-        Route::delete('business/{business}/products/{product}', [\App\Http\Controllers\Api\V1\ProductController::class, 'destroy']);
-        Route::post('business/{business}/like', [BusinessController::class, 'like']);
-        Route::delete('business/{business}/like', [BusinessController::class, 'unlike']);
+        Route::post('businesses', [BusinessController::class, 'store']);
+        Route::put('businesses/{business}', [BusinessController::class, 'update']);
+        Route::post('businesses/{business}/products', [\App\Http\Controllers\Api\V1\ProductController::class, 'store']);
+        Route::put('businesses/{business}/products/{product}', [\App\Http\Controllers\Api\V1\ProductController::class, 'update']);
+        Route::delete('businesses/{business}/products/{product}', [\App\Http\Controllers\Api\V1\ProductController::class, 'destroy']);
+        Route::post('businesses/{business}/like', [BusinessController::class, 'like']);
+        Route::delete('businesses/{business}/like', [BusinessController::class, 'unlike']);
 
         // Ads management (admins/moderators)
         Route::put('ads/{ad}', [AdController::class, 'update']);
@@ -71,6 +70,6 @@ Route::prefix('v1')->group(function () {
         Route::post('jobs', [JobController::class, 'store']);
         Route::post('job/apply', [JobController::class, 'apply']);
 
-        Route::post('business/{business}/payment', [PaymentController::class, 'store']);
+        Route::post('businesses/{business}/payment', [PaymentController::class, 'store']);
     });
 });

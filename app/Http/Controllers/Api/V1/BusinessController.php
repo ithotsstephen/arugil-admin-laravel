@@ -7,63 +7,115 @@ use App\Models\Business;
 use App\Models\BusinessImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class BusinessController extends Controller
 {
     public function index(Request $request)
     {
-        $businesses = Business::query()
-            ->where('is_approved', true)
-            ->where(function($query) {
-                $query->whereNull('expiry_date')
+        $cacheKey = 'business_search_' . md5($request->fullUrl());
+
+        // limit per_page to prevent excessive load
+        $perPage = (int) $request->input('per_page', 15);
+        $perPage = max(1, min($perPage, 50));
+
+        // Cache for 60 minutes
+        $result = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($request, $perPage) {
+            $query = Business::query()
+                ->where('is_approved', true)
+                ->where(function($q) {
+                    $q->whereNull('expiry_date')
                       ->orWhere('expiry_date', '>=', now());
-            })
-            ->when($request->filled('category_id'), fn ($query) => $query->where('category_id', $request->integer('category_id')))
-            ->when($request->boolean('featured'), fn ($query) => $query->where('is_featured', true))
-            ->when($request->filled('q'), function ($query) use ($request) {
+                });
+
+            // Accept both legacy params and `filter[...]` style
+            $filters = $request->input('filter', []);
+            if (!is_array($filters)) {
+                $filters = [];
+            }
+
+            $categoryId = $filters['category'] ?? $request->input('category_id');
+            if ($categoryId) {
+                $query->where('category_id', (int) $categoryId);
+            }
+
+            // Normalize featured boolean from filter[...] or top-level param
+            $featured = null;
+            if (array_key_exists('featured', $filters)) {
+                $featured = filter_var($filters['featured'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            } elseif ($request->has('featured')) {
+                $featured = $request->boolean('featured');
+            }
+
+            if ($featured === true) {
+                $query->where('is_featured', true);
+            }
+
+            // Lightweight search: name, keywords, category
+            if ($request->filled('q')) {
                 $search = trim($request->string('q')->toString());
-                if ($search === '') {
-                    return;
-                }
-
-                $term = mb_strtolower($search, 'UTF-8');
-
-                $query->where(function ($q) use ($term) {
+                if ($search !== '') {
+                    $term = mb_strtolower($search, 'UTF-8');
                     $like = "%{$term}%";
 
-                    $q->whereRaw('LOWER(name) LIKE ?', [$like])
-                      ->orWhereRaw('LOWER(COALESCE(description, \'\')) LIKE ?', [$like])
-                      ->orWhereRaw('LOWER(COALESCE(address, \'\')) LIKE ?', [$like])
-                      ->orWhereRaw('LOWER(COALESCE(owner_name, \'\')) LIKE ?', [$like])
-                      ->orWhereRaw('LOWER(COALESCE(keywords::text, \'\')) LIKE ?', [$like])
-                      ->orWhereRaw('LOWER(COALESCE(phone, \'\')) LIKE ?', [$like])
-                      ->orWhereRaw('LOWER(COALESCE(email, \'\')) LIKE ?', [$like])
-                      ->orWhereRaw('LOWER(COALESCE(services::text, \'\')) LIKE ?', [$like])
-                      ->orWhereRaw('LOWER(COALESCE(offers::text, \'\')) LIKE ?', [$like]);
-
-                    // Related models: category, city, district, area
-                    $q->orWhereHas('category', function ($cq) use ($like) {
-                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                    $query->where(function ($q) use ($like) {
+                                        $q->whereRaw('LOWER(name) LIKE ?', [$like])
+                                            ->orWhereRaw('LOWER(COALESCE(keywords::text, \'\')) LIKE ?', [$like])
+                                            ->orWhereRaw('LOWER(COALESCE(description, \'\')) LIKE ?', [$like])
+                                            ->orWhereHas('category', function ($cq) use ($like) {
+                                                    $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
+                                            });
                     });
+                }
+            }
 
-                    $q->orWhereHas('city', function ($cq) use ($like) {
-                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
-                    });
+            // Sorting: support -field desc syntax and friendly aliases
+            $sort = $request->string('sort')->toString();
+            if ($sort === 'latest') {
+                $sort = '-created_at';
+            } elseif ($sort === 'popular') {
+                $sort = '-likes_count';
+            } elseif ($sort === 'name') {
+                $sort = 'name';
+            }
 
-                    $q->orWhereHas('district', function ($cq) use ($like) {
-                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
-                    });
+            if ($sort) {
+                $direction = 'asc';
+                if (str_starts_with($sort, '-')) {
+                    $direction = 'desc';
+                    $sort = ltrim($sort, '-');
+                }
 
-                    $q->orWhereHas('area', function ($cq) use ($like) {
-                        $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
-                    });
-                });
-            })
-            ->with(['category', 'owner'])
-            ->withCount('likes')
-            ->paginate($request->integer('per_page', 15));
+                // If sorting by likes_count ensure we have the count
+                if ($sort === 'likes_count') {
+                    $query->withCount('likes')->orderBy($sort, $direction);
+                } else {
+                    $query->orderBy($sort, $direction);
+                }
+            } else {
+                $query->orderByDesc('created_at');
+            }
+            $paginator = $query->with(['category', 'owner'])->withCount('likes')->paginate($perPage);
 
-        return response()->json($businesses);
+            return $paginator;
+        });
+
+        // $result is a LengthAwarePaginator instance
+        $payload = [
+            'success' => true,
+            'data' => $result->items(),
+            'meta' => [
+                'current_page' => $result->currentPage(),
+                'per_page' => $result->perPage(),
+                'total' => $result->total(),
+                'last_page' => $result->lastPage(),
+                'next_page_url' => $result->nextPageUrl(),
+                'prev_page_url' => $result->previousPageUrl(),
+            ],
+        ];
+
+        return response()->json($payload)
+            ->header('Cache-Control', 'public, max-age=3600');
     }
 
     public function show(\Illuminate\Http\Request $request, Business $business)
