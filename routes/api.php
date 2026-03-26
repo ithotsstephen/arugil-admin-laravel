@@ -9,7 +9,9 @@ use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +32,19 @@ Route::prefix('v1')->group(function () {
         Route::post('verify-login-otp', [AuthController::class, 'verifyLoginOtp']);
         Route::post('verify-otp', [AuthController::class, 'verifyRegistrationOtp']);
         Route::post('resend-otp', [AuthController::class, 'resendRegistrationOtp']);
+        Route::post('forgot-password', function (Request $request) {
+            $request->validate(['email' => 'required|email']);
+
+            $status = Password::sendResetLink($request->only('email'));
+
+            if ($status === Password::RESET_LINK_SENT) {
+                return response()->json(['message' => 'Reset link sent successfully.']);
+            }
+
+            throw ValidationException::withMessages([
+                'email' => [__($status)],
+            ]);
+        });
         Route::post('social', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'token']);
         Route::post('verify-widget-token', [AuthController::class, 'verifyWidgetToken']);
     });
