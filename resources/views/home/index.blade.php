@@ -11,6 +11,9 @@
 </div>
 
 <div class="container">
+    @php
+        $selectedCategory = request('category');
+    @endphp
     <div class="filters">
         <form id="search-form" method="GET" action="/">
             <input 
@@ -23,16 +26,22 @@
             <select name="category">
                 <option value="">All Categories</option>
                 @foreach($categories as $parent)
+                    @if($parent->children->isNotEmpty())
                     <optgroup label="{{ $parent->name }}">
                         @foreach($parent->children as $child)
                             <option 
                                 value="{{ $child->id }}" 
-                                {{ request('category') == $child->id ? 'selected' : '' }}
+                                {{ $selectedCategory == $child->id ? 'selected' : '' }}
                             >
                                 {{ $child->name }}
                             </option>
                         @endforeach
                     </optgroup>
+                    @else
+                        <option value="{{ $parent->id }}" {{ $selectedCategory == $parent->id ? 'selected' : '' }}>
+                            {{ $parent->name }}
+                        </option>
+                    @endif
                 @endforeach
             </select>
             <button type="submit">Search</button>
@@ -65,89 +74,6 @@
         <div class="pagination">
             {{ $businesses->links() }}
         </div>
-
-        <script>
-            (function(){
-                const form = document.getElementById('search-form');
-                const input = document.getElementById('search-input');
-                const resultsGrid = document.getElementById('results-grid');
-
-                function renderCard(b) {
-                    const a = document.createElement('a');
-                    a.href = '/business/' + b.id;
-                    a.className = 'card';
-
-                    const imgWrap = document.createElement('div');
-                    imgWrap.className = 'card-image';
-                    if (b.image_url) {
-                        const img = document.createElement('img');
-                        img.src = b.image_url;
-                        img.alt = b.name;
-                        imgWrap.appendChild(img);
-                    } else {
-                        imgWrap.textContent = (b.name || '').charAt(0).toUpperCase();
-                    }
-
-                    const body = document.createElement('div');
-                    body.className = 'card-body';
-                    if (b.is_featured) {
-                        const span = document.createElement('span');
-                        span.className = 'badge badge-featured';
-                        span.textContent = '⭐ Featured';
-                        body.appendChild(span);
-                    }
-                    const h3 = document.createElement('h3');
-                    h3.className = 'card-title';
-                    h3.textContent = b.name;
-                    const cat = document.createElement('span');
-                    cat.className = 'card-category';
-                    cat.textContent = (b.category && b.category.name) || '';
-                    const p = document.createElement('p');
-                    p.className = 'card-description';
-                    p.textContent = b.description || '';
-
-                    body.appendChild(h3);
-                    body.appendChild(cat);
-                    body.appendChild(p);
-
-                    a.appendChild(imgWrap);
-                    a.appendChild(body);
-
-                    return a;
-                }
-
-                async function doSearch(q) {
-                    const url = new URL('/api/v1/businesses', window.location.origin);
-                    url.searchParams.set('q', q);
-                    url.searchParams.set('per_page', '12');
-
-                    try {
-                        const res = await fetch(url.toString(), { credentials: 'same-origin' });
-                        if (!res.ok) throw new Error('Network error');
-                        const data = await res.json();
-
-                        // clear grid
-                        resultsGrid.innerHTML = '';
-
-                        if (data.data && data.data.length) {
-                            data.data.forEach(b => {
-                                resultsGrid.appendChild(renderCard(b));
-                            });
-                        } else {
-                            resultsGrid.innerHTML = '<p>No businesses found</p>';
-                        }
-                    } catch (err) {
-                        console.error(err);
-                    }
-                }
-
-                form.addEventListener('submit', function(e){
-                    e.preventDefault();
-                    const q = input.value.trim();
-                    doSearch(q);
-                });
-            })();
-        </script>
     @else
         <div class="empty-state">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">

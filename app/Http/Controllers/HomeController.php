@@ -24,9 +24,16 @@ class HomeController extends Controller
                       ->orWhere('expiry_date', '>=', now());
             })
             ->with(['category'])
-            ->when($request->filled('category'), fn ($query) => 
-                $query->where('category_id', $request->integer('category'))
-            )
+            ->when($request->filled('category'), function ($query) use ($request) {
+                $categoryId = $request->integer('category');
+
+                $categoryIds = Category::query()
+                    ->where('id', $categoryId)
+                    ->orWhere('parent_id', $categoryId)
+                    ->pluck('id');
+
+                $query->whereIn('category_id', $categoryIds);
+            })
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim($request->string('search')->toString());
                 if ($search === '') {

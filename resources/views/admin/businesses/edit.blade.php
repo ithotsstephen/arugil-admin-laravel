@@ -18,21 +18,28 @@
         <input type="text" name="name" required value="{{ old('name', $business->name) }}">
         
         <label>Category*</label>
+        @php
+            $selectedCategoryId = old('category_id', $business->category_id);
+        @endphp
         <select name="category_id" required>
             <option value="">Select Category</option>
             @foreach($categories as $category)
+                @if($category->children->isNotEmpty())
                 <optgroup label="{{ $category->name }}">
-                    <option value="{{ $category->id }}" {{ $business->category_id == $category->id ? 'selected' : '' }}>
-                        {{ $category->name }}
-                    </option>
                     @foreach($category->children as $child)
-                        <option value="{{ $child->id }}" {{ $business->category_id == $child->id ? 'selected' : '' }}>
+                        <option value="{{ $child->id }}" {{ $selectedCategoryId == $child->id ? 'selected' : '' }}>
                             — {{ $child->name }}
                         </option>
                     @endforeach
                 </optgroup>
+                @else
+                    <option value="{{ $category->id }}" {{ $selectedCategoryId == $category->id ? 'selected' : '' }}>
+                        {{ $category->name }}
+                    </option>
+                @endif
             @endforeach
         </select>
+        <p class="muted" style="font-size:12px; margin-top:6px;">If a main category has subcategories, choose one of its subcategories.</p>
 
         <h3 style="margin: 24px 0 16px;">Location</h3>
 

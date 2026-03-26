@@ -143,6 +143,13 @@ class BusinessesController extends Controller
                 }
         }
 
+        if (isset($fields['category_id']) && $this->categoryRequiresSubcategory((int) $fields['category_id'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please select a subcategory instead of the main category.',
+            ], 422);
+        }
+
         // special handling: keywords -> array
         if (isset($fields['keywords']) && is_string($fields['keywords'])) {
             $keywords = collect(explode(',', $fields['keywords']))->map(fn($k) => trim($k))->filter()->take(12)->values()->all();
@@ -182,7 +189,7 @@ class BusinessesController extends Controller
             } else {
                 // Ensure required non-null fields have safe defaults for draft creation (DB may enforce NOT NULL)
                 if (empty($fields['category_id'])) {
-                    $firstCategoryId = \App\Models\Category::orderBy('id')->value('id');
+                    $firstCategoryId = $this->defaultDraftCategoryId();
                     if ($firstCategoryId) {
                         $fields['category_id'] = $firstCategoryId;
                     } else {
@@ -263,7 +270,15 @@ class BusinessesController extends Controller
             'owner_image_url' => ['nullable', 'url', 'max:2048'],
             'owner_image_file' => ['nullable', 'image', 'max:5120'],
             'years_of_business' => ['nullable', 'integer', 'min:0', 'max:150'],
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => [
+                'required',
+                'exists:categories,id',
+                function ($attribute, $value, $fail) {
+                    if ($this->categoryRequiresSubcategory((int) $value)) {
+                        $fail('Please select a subcategory instead of the main category.');
+                    }
+                },
+            ],
             'state_id' => ['nullable', 'exists:states,id'],
             'city_id' => ['nullable', 'exists:cities,id'],
             'district_id' => ['nullable', 'exists:districts,id'],
@@ -623,7 +638,15 @@ class BusinessesController extends Controller
             'owner_image_url' => ['nullable', 'url', 'max:2048'],
             'owner_image_file' => ['nullable', 'image', 'max:5120'],
             'years_of_business' => ['nullable', 'integer', 'min:0', 'max:150'],
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => [
+                'required',
+                'exists:categories,id',
+                function ($attribute, $value, $fail) {
+                    if ($this->categoryRequiresSubcategory((int) $value)) {
+                        $fail('Please select a subcategory instead of the main category.');
+                    }
+                },
+            ],
             'state_id' => ['nullable', 'exists:states,id'],
             'city_id' => ['nullable', 'exists:cities,id'],
             'district_id' => ['nullable', 'exists:districts,id'],
@@ -746,6 +769,21 @@ class BusinessesController extends Controller
         }
 
         return redirect()->route('admin.businesses.index')->with('status', 'Business updated.');
+    }
+
+    private function categoryRequiresSubcategory(int $categoryId): bool
+    {
+        return \App\Models\Category::whereKey($categoryId)
+            ->whereHas('children')
+            ->exists();
+    }
+
+    private function defaultDraftCategoryId(): ?int
+    {
+        return \App\Models\Category::whereDoesntHave('children')
+            ->orderBy('id')
+            ->value('id')
+            ?? \App\Models\Category::orderBy('id')->value('id');
     }
 
     public function approve(Business $business)

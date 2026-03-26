@@ -24,14 +24,18 @@
         <select name="category_id" required>
             <option value="">Select Category</option>
             @foreach($categories as $category)
+                @if($category->children->isNotEmpty())
                 <optgroup label="{{ $category->name }}">
-                    <option value="{{ $category->id }}">{{ $category->name }}</option>
                     @foreach($category->children as $child)
                         <option value="{{ $child->id }}">— {{ $child->name }}</option>
                     @endforeach
                 </optgroup>
+                @else
+                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                @endif
             @endforeach
         </select>
+        <p class="muted" style="font-size:12px; margin-top:6px;">If a main category has subcategories, choose one of its subcategories.</p>
 
         
 

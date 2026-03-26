@@ -156,7 +156,15 @@ class BusinessController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => [
+                'required',
+                'exists:categories,id',
+                function ($attribute, $value, $fail) {
+                    if ($this->categoryRequiresSubcategory((int) $value)) {
+                        $fail('Please select a subcategory instead of the main category.');
+                    }
+                },
+            ],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'phone' => ['nullable', 'string', 'max:50'],
@@ -203,7 +211,15 @@ class BusinessController extends Controller
         }
 
         $data = $request->validate([
-            'category_id' => ['sometimes', 'exists:categories,id'],
+            'category_id' => [
+                'sometimes',
+                'exists:categories,id',
+                function ($attribute, $value, $fail) {
+                    if ($this->categoryRequiresSubcategory((int) $value)) {
+                        $fail('Please select a subcategory instead of the main category.');
+                    }
+                },
+            ],
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'string'],
             'phone' => ['sometimes', 'string', 'max:50'],
@@ -239,6 +255,13 @@ class BusinessController extends Controller
         }
 
         return response()->json($business);
+    }
+
+    private function categoryRequiresSubcategory(int $categoryId): bool
+    {
+        return \App\Models\Category::whereKey($categoryId)
+            ->whereHas('children')
+            ->exists();
     }
 
     public function featured(Request $request)
