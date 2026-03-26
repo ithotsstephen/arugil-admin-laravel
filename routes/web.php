@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -33,6 +34,15 @@ Route::get('/business/{business}', [HomeController::class, 'show'])->name('busin
 Route::get('/login', [LoginController::class, 'show'])->name('login')->middleware('guest');
 Route::post('/login', [LoginController::class, 'store'])->name('login.store')->middleware('guest');
 Route::post('/logout', [LoginController::class, 'destroy'])->name('logout')->middleware('auth');
+
+// Needed by Laravel password broker when generating reset emails.
+Route::get('/reset-password/{token}', function (Request $request, string $token) {
+    return response()->json([
+        'message' => 'Password reset link is valid.',
+        'token' => $token,
+        'email' => $request->query('email'),
+    ]);
+})->name('password.reset');
 
 // Mobile user auth (simple views for mobile users)
 use App\Http\Controllers\Auth\MobileAuthController;

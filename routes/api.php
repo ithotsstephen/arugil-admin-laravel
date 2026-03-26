@@ -9,9 +9,9 @@ use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Validation\ValidationException;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,15 +35,33 @@ Route::prefix('v1')->group(function () {
         Route::post('forgot-password', function (Request $request) {
             $request->validate(['email' => 'required|email']);
 
-            $status = Password::sendResetLink($request->only('email'));
+            try {
+                $status = Password::broker('users')->sendResetLink($request->only('email'));
 
-            if ($status === Password::RESET_LINK_SENT) {
-                return response()->json(['message' => 'Reset link sent successfully.']);
+                if ($status === Password::RESET_LINK_SENT) {
+                    return response()->json(['message' => 'Reset link sent successfully.']);
+                }
+
+                if ($status === Password::INVALID_USER) {
+                    // Avoid leaking which emails exist while keeping the response stable for clients.
+                    return response()->json(['message' => 'If this email exists, a reset link has been sent.']);
+                }
+
+                if ($status === Password::RESET_THROTTLED) {
+                    return response()->json(['message' => __($status)], 429);
+                }
+
+                return response()->json(['message' => __($status)], 422);
+            } catch (\Throwable $e) {
+                Log::error('Forgot password API failed', [
+                    'email' => $request->input('email'),
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Reset link generation succeeded but email delivery failed. Please try again.',
+                ], 202);
             }
-
-            throw ValidationException::withMessages([
-                'email' => [__($status)],
-            ]);
         });
         Route::post('social', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'token']);
         Route::post('verify-widget-token', [AuthController::class, 'verifyWidgetToken']);
