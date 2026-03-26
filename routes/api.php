@@ -8,10 +8,16 @@ use App\Http\Controllers\Api\V1\JobController;
 use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,35 +39,100 @@ Route::prefix('v1')->group(function () {
         Route::post('verify-otp', [AuthController::class, 'verifyRegistrationOtp']);
         Route::post('resend-otp', [AuthController::class, 'resendRegistrationOtp']);
         Route::post('forgot-password', function (Request $request) {
-            $request->validate(['email' => 'required|email']);
+            $data = $request->validate(['email' => 'required|email']);
 
             try {
-                $status = Password::broker('users')->sendResetLink($request->only('email'));
+                $email = strtolower($data['email']);
+                $user = User::where('email', $email)->first();
 
-                if ($status === Password::RESET_LINK_SENT) {
-                    return response()->json(['message' => 'Reset link sent successfully.']);
+                if (! $user) {
+                    // Keep response generic to avoid user enumeration.
+                    return response()->json(['message' => 'If this email exists, an OTP has been sent.']);
                 }
 
-                if ($status === Password::INVALID_USER) {
-                    // Avoid leaking which emails exist while keeping the response stable for clients.
-                    return response()->json(['message' => 'If this email exists, a reset link has been sent.']);
-                }
+                $otp = (string) random_int(100000, 999999);
+                Cache::put('forgot_password_otp:' . $email, $otp, now()->addMinutes(10));
 
-                if ($status === Password::RESET_THROTTLED) {
-                    return response()->json(['message' => __($status)], 429);
-                }
+                Mail::raw("Your password reset OTP is: {$otp}. It expires in 10 minutes.", function ($m) use ($email) {
+                    $m->to($email)->subject('Password Reset OTP');
+                });
 
-                return response()->json(['message' => __($status)], 422);
+                return response()->json(['message' => 'OTP sent successfully.']);
             } catch (\Throwable $e) {
                 Log::error('Forgot password API failed', [
-                    'email' => $request->input('email'),
+                    'email' => $data['email'] ?? null,
                     'error' => $e->getMessage(),
                 ]);
 
                 return response()->json([
-                    'message' => 'Reset link generation succeeded but email delivery failed. Please try again.',
-                ], 202);
+                    'message' => 'Unable to send OTP right now. Please try again.',
+                ], 500);
             }
+        });
+        Route::post('verify-forgot-otp', function (Request $request) {
+            $data = $request->validate([
+                'email' => ['required', 'email'],
+                'otp' => ['required', 'string', 'size:6'],
+            ]);
+
+            $email = strtolower($data['email']);
+            $cachedOtp = Cache::get('forgot_password_otp:' . $email);
+
+            if (!$cachedOtp || $cachedOtp !== $data['otp']) {
+                return response()->json(['message' => 'Invalid or expired OTP.'], 422);
+            }
+
+            return response()->json(['message' => 'OTP verified successfully.']);
+        });
+        Route::post('reset-password', function (Request $request) {
+            $data = $request->validate([
+                'email' => ['required', 'email'],
+                'password' => ['required', 'string', 'min:8', 'confirmed'],
+                'token' => ['nullable', 'string', 'required_without:otp'],
+                'otp' => ['nullable', 'string', 'size:6', 'required_without:token'],
+            ]);
+
+            if (!empty($data['otp'])) {
+                $email = strtolower($data['email']);
+                $cachedOtp = Cache::get('forgot_password_otp:' . $email);
+
+                if (!$cachedOtp || $cachedOtp !== $data['otp']) {
+                    return response()->json(['message' => 'Invalid or expired OTP.'], 422);
+                }
+
+                $user = User::where('email', $email)->first();
+                if (!$user) {
+                    return response()->json(['message' => 'Unable to reset password.'], 422);
+                }
+
+                $user->forceFill([
+                    'password' => Hash::make($data['password']),
+                    'remember_token' => Str::random(60),
+                ])->save();
+
+                Cache::forget('forgot_password_otp:' . $email);
+                event(new PasswordReset($user));
+
+                return response()->json(['message' => 'Password reset successfully.']);
+            }
+
+            $status = Password::broker('users')->reset(
+                $data,
+                function ($user, $password) {
+                    $user->forceFill([
+                        'password' => Hash::make($password),
+                        'remember_token' => Str::random(60),
+                    ])->save();
+
+                    event(new PasswordReset($user));
+                }
+            );
+
+            if ($status === Password::PASSWORD_RESET) {
+                return response()->json(['message' => 'Password reset successfully.']);
+            }
+
+            return response()->json(['message' => __($status)], 422);
         });
         Route::post('social', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'token']);
         Route::post('verify-widget-token', [AuthController::class, 'verifyWidgetToken']);
