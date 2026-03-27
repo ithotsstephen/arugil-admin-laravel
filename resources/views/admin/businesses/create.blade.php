@@ -399,7 +399,7 @@
         </label>
         
         <div style="display: flex; gap: 8px; margin-top: 16px;">
-            <button type="submit" class="btn btn-primary">Create Business</button>
+            <button type="submit" class="btn btn-primary">Save Business</button>
             <a href="{{ route('admin.businesses.index') }}" class="btn">Cancel</a>
         </div>
     </div>
@@ -638,9 +638,17 @@ function toggleProductImageInput(index) {
 
     if (radio === 'upload' || !radio) {
         if (uploadInput) uploadInput.style.display = 'block';
-        if (urlInput) urlInput.style.display = 'none';
+        if (urlInput) {
+            urlInput.style.display = 'none';
+            const urlField = urlInput.querySelector('input[type="url"]');
+            if (urlField) urlField.value = '';
+        }
     } else {
-        if (uploadInput) uploadInput.style.display = 'none';
+        if (uploadInput) {
+            uploadInput.style.display = 'none';
+            const fileField = uploadInput.querySelector('input[type="file"]');
+            if (fileField) fileField.value = '';
+        }
         if (urlInput) urlInput.style.display = 'block';
     }
 }

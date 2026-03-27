@@ -287,8 +287,8 @@ class BusinessesController extends Controller
             'description' => ['nullable', 'string'],
             'about_title' => ['nullable', 'string', 'max:255'],
             'services' => ['nullable', 'array'],
-            'services.*.title' => ['required', 'string', 'max:255'],
-            'services.*.description' => ['required', 'string'],
+            'services.*.title' => ['nullable', 'string', 'max:255'],
+            'services.*.description' => ['nullable', 'string'],
             'phone' => ['nullable', 'string', 'max:50'],
             'whatsapp' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -312,7 +312,7 @@ class BusinessesController extends Controller
             'products' => ['nullable', 'array', 'max:12'],
             'products.*.name' => ['nullable', 'string', 'max:255'],
             'products.*.image_file' => ['nullable', 'image', 'max:5120'],
-            'products.*.image_url' => ['nullable', 'url', 'max:2048'],
+            'products.*.image_url' => ['nullable', 'string', 'max:2048'],
             'products.*.price' => ['nullable', 'string', 'max:255'],
             'products.*.description' => ['nullable', 'string'],
             'existing_payments' => ['nullable', 'array'],
@@ -327,7 +327,7 @@ class BusinessesController extends Controller
             'products' => ['nullable', 'array', 'max:12'],
             'products.*.name' => ['nullable', 'string', 'max:255'],
             'products.*.image_file' => ['nullable', 'image', 'max:5120'],
-            'products.*.image_url' => ['nullable', 'url', 'max:2048'],
+            'products.*.image_url' => ['nullable', 'string', 'max:2048'],
             'products.*.price' => ['nullable', 'string', 'max:255'],
             'products.*.description' => ['nullable', 'string'],
         ]);
@@ -499,81 +499,6 @@ class BusinessesController extends Controller
             }
         }
 
-        // Update existing products
-        if ($request->has('existing_products')) {
-            foreach ($request->input('existing_products') as $prodData) {
-                $prod = $business->products()->whereKey($prodData['id'])->first();
-                if (! $prod) continue;
-
-                $update = [];
-                $update['name'] = $prodData['name'] ?? $prod->name;
-                $update['price'] = $prodData['price'] ?? $prod->price;
-                $update['description'] = $prodData['description'] ?? $prod->description;
-
-                if (!empty($prodData['image_url'])) {
-                    $update['image_url'] = $prodData['image_url'];
-                }
-
-                // image file handled below via products uploads
-                $prod->update($update);
-            }
-        }
-
-        // Delete products if requested
-        if ($request->filled('delete_products')) {
-                $business->products()->whereIn('id', $request->input('delete_products'))->get()->each(function ($p) {
-                if (!empty($p->image_url) && str_starts_with($p->image_url, '/storage/')) {
-                    \Storage::disk('public')->delete(str_replace('/storage/', '', $p->image_url));
-                }
-                $p->delete();
-            });
-        }
-
-        // Handle new products and image uploads for existing ones
-        if ($request->has('products')) {
-            foreach ($request->input('products') as $index => $p) {
-                // if this is an existing product id, update image if uploaded
-                if (!empty($p['existing_id'])) {
-                    $prod = $business->products()->whereKey($p['existing_id'])->first();
-                    if ($prod) {
-                        if ($request->hasFile("products.{$index}.image_file")) {
-                            // delete old file
-                            if (!empty($prod->image_url) && str_starts_with($prod->image_url, '/storage/')) {
-                                \Storage::disk('public')->delete(str_replace('/storage/', '', $prod->image_url));
-                            }
-                            $path = $request->file("products.{$index}.image_file")->store('businesses/products', 'public');
-                            $prod->update(['image_url' => '/storage/' . $path]);
-                        }
-                        $prod->update([
-                            'name' => $p['name'] ?? $prod->name,
-                            'price' => $p['price'] ?? $prod->price,
-                            'description' => $p['description'] ?? $prod->description,
-                        ]);
-                    }
-                    continue;
-                }
-
-                if (empty($p['name']) && empty($p['price']) && empty($p['description']) && !$request->hasFile("products.{$index}.image_file")) {
-                    continue;
-                }
-
-                $imageUrl = null;
-                if ($request->hasFile("products.{$index}.image_file")) {
-                    $path = $request->file("products.{$index}.image_file")->store('businesses/products', 'public');
-                    $imageUrl = '/storage/' . $path;
-                } elseif (!empty($p['image_url'])) {
-                    $imageUrl = $p['image_url'];
-                }
-
-                $business->products()->create([
-                    'name' => $p['name'] ?? null,
-                    'price' => $p['price'] ?? null,
-                    'description' => $p['description'] ?? null,
-                    'image_url' => $imageUrl,
-                ]);
-            }
-        }
-
         if ($request->has('existing_payments')) {
             foreach ($request->input('existing_payments') as $paymentData) {
                 $payment = $business->payments()->whereKey($paymentData['id'])->first();
@@ -655,8 +580,8 @@ class BusinessesController extends Controller
             'pincode_id' => ['nullable', 'exists:pincodes,id'],
             'about_title' => ['nullable', 'string', 'max:255'],
             'services' => ['nullable', 'array'],
-            'services.*.title' => ['required', 'string', 'max:255'],
-            'services.*.description' => ['required', 'string'],
+            'services.*.title' => ['nullable', 'string', 'max:255'],
+            'services.*.description' => ['nullable', 'string'],
             'phone' => ['nullable', 'string', 'max:50'],
             'whatsapp' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],

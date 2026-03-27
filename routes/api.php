@@ -135,7 +135,6 @@ Route::prefix('v1')->group(function () {
             return response()->json(['message' => __($status)], 422);
         });
         Route::post('social', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'token']);
-        Route::post('verify-widget-token', [AuthController::class, 'verifyWidgetToken']);
     });
 
     Route::get('categories', [CategoryController::class, 'index']);

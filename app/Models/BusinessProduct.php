@@ -17,9 +17,7 @@ class BusinessProduct extends Model
         'description',
     ];
 
-    protected $casts = [
-        'price' => 'float',
-    ];
+    protected $casts = [];
 
     public function business()
     {
