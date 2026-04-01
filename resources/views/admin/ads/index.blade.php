@@ -48,7 +48,7 @@
 </div>
 
 <div class="card" style="margin-bottom: 16px;">
-    <form method="POST" action="{{ route('admin.ads.store') }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ route('admin.ads.store') }}">
         @csrf
         <div class="filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
             <input type="text" name="title" placeholder="Title" required>
@@ -62,7 +62,7 @@
                     </optgroup>
                 @endforeach
             </select>
-            @include('components.image-uploader', ['name' => 'image_file', 'urlName' => 'image_url'])
+            @include('components.image-uploader', ['urlName' => 'image_url'])
             <input type="text" name="link" placeholder="Click URL">
             <select name="placement" required>
                 <option value="home">Home</option>

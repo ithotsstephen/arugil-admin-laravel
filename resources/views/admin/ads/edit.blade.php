@@ -13,7 +13,7 @@
 @endif
 
 <div class="card">
-    <form method="POST" action="{{ route('admin.ads.update', $ad) }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ route('admin.ads.update', $ad) }}">
         @csrf
         @method('PUT')
         <div class="filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
@@ -28,7 +28,7 @@
                     </optgroup>
                 @endforeach
             </select>
-            @include('components.image-uploader', ['name' => 'image_file', 'urlName' => 'image_url', 'existing' => $ad->image_url])
+            @include('components.image-uploader', ['urlName' => 'image_url', 'existing' => $ad->image_url])
             <input type="text" name="link" value="{{ old('link', $ad->link) }}" placeholder="Click URL">
             <select name="placement" required>
                 <option value="home" {{ old('placement', $ad->placement) == 'home' ? 'selected' : '' }}>Home</option>
