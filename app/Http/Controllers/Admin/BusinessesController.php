@@ -120,7 +120,7 @@ class BusinessesController extends Controller
 
         $map = [
             'basic' => ['name', 'category_id', 'keywords', 'about_title', 'description', 'years_of_business'],
-            'location' => ['state_id', 'city_id', 'district_id', 'area_id', 'pincode_id', 'address', 'latitude', 'longitude'],
+            'location' => ['state_id', 'city_id', 'district_id', 'area_id', 'pincode', 'address', 'latitude', 'longitude'],
             'contact' => ['phone', 'whatsapp', 'email', 'website'],
             'social' => ['facebook', 'instagram', 'twitter', 'linkedin'],
             'media' => ['image_url', 'owner_image_url'],
@@ -156,6 +156,10 @@ class BusinessesController extends Controller
             $fields['keywords'] = $keywords;
         }
 
+        if (isset($fields['years_of_business']) && is_string($fields['years_of_business'])) {
+            $fields['years_of_business'] = trim($fields['years_of_business']);
+        }
+
         // handle common file uploads for media section
         if ($request->hasFile('image_file')) {
             $path = $request->file('image_file')->store('businesses', 'public');
@@ -169,14 +173,8 @@ class BusinessesController extends Controller
 
         $fields['user_id'] = auth()->id();
 
-        // If pincode_id provided, set the human-readable pincode string for backward compatibility
-        if (isset($fields['pincode_id']) && $fields['pincode_id']) {
-            if (\Illuminate\Support\Facades\Schema::hasTable('pincodes')) {
-                $code = DB::table('pincodes')->where('id', $fields['pincode_id'])->value('code');
-                if ($code) {
-                    $fields['pincode'] = $code;
-                }
-            }
+        if (array_key_exists('pincode', $fields)) {
+            $fields['pincode'] = is_string($fields['pincode']) ? trim($fields['pincode']) : $fields['pincode'];
         }
 
         try {
@@ -269,7 +267,7 @@ class BusinessesController extends Controller
             'owner_name' => ['nullable', 'string', 'max:255'],
             'owner_image_url' => ['nullable', 'url', 'max:2048'],
             'owner_image_file' => ['nullable', 'image', 'max:5120'],
-            'years_of_business' => ['nullable', 'integer', 'min:0', 'max:150'],
+            'years_of_business' => ['nullable', 'string', 'max:255'],
             'category_id' => [
                 'required',
                 'exists:categories,id',
@@ -283,7 +281,7 @@ class BusinessesController extends Controller
             'city_id' => ['nullable', 'exists:cities,id'],
             'district_id' => ['nullable', 'exists:districts,id'],
             'area_id' => ['nullable', 'exists:areas,id'],
-            'pincode_id' => ['nullable', 'exists:pincodes,id'],
+            'pincode' => ['nullable', 'string', 'max:20'],
             'description' => ['nullable', 'string'],
             'about_title' => ['nullable', 'string', 'max:255'],
             'services' => ['nullable', 'array'],
@@ -345,6 +343,10 @@ class BusinessesController extends Controller
             $data['keywords'] = [];
         }
 
+        if (isset($data['years_of_business']) && is_string($data['years_of_business'])) {
+            $data['years_of_business'] = trim($data['years_of_business']);
+        }
+
 
         // Handle hero image upload
         if ($request->hasFile('image_file')) {
@@ -358,13 +360,8 @@ class BusinessesController extends Controller
             $data['owner_image_url'] = '/storage/' . $path;
         }
 
-        // If pincode_id provided, set pincode text for compatibility and persist pincode_id
-        if ($request->filled('pincode_id')) {
-            $p = \App\Models\Pincode::find($request->input('pincode_id'));
-            if ($p) {
-                $data['pincode'] = $p->code;
-                $data['pincode_id'] = $p->id;
-            }
+        if (array_key_exists('pincode', $data)) {
+            $data['pincode'] = is_string($data['pincode']) ? trim($data['pincode']) : $data['pincode'];
         }
 
         // Handle offer images
@@ -562,7 +559,7 @@ class BusinessesController extends Controller
             'owner_name' => ['nullable', 'string', 'max:255'],
             'owner_image_url' => ['nullable', 'url', 'max:2048'],
             'owner_image_file' => ['nullable', 'image', 'max:5120'],
-            'years_of_business' => ['nullable', 'integer', 'min:0', 'max:150'],
+            'years_of_business' => ['nullable', 'string', 'max:255'],
             'category_id' => [
                 'required',
                 'exists:categories,id',
@@ -577,8 +574,9 @@ class BusinessesController extends Controller
             'district_id' => ['nullable', 'exists:districts,id'],
             'area_id' => ['nullable', 'exists:areas,id'],
             'description' => ['nullable', 'string'],
-            'pincode_id' => ['nullable', 'exists:pincodes,id'],
+            'pincode' => ['nullable', 'string', 'max:20'],
             'about_title' => ['nullable', 'string', 'max:255'],
+            'keywords' => ['nullable', 'string', 'max:255'],
             'services' => ['nullable', 'array'],
             'services.*.title' => ['nullable', 'string', 'max:255'],
             'services.*.description' => ['nullable', 'string'],
@@ -605,6 +603,18 @@ class BusinessesController extends Controller
             'payments.*.transaction_id' => ['nullable', 'string', 'max:255'],
         ]);
 
+        if (!empty($data['keywords'])) {
+            $keywords = collect(explode(',', $data['keywords']))
+                ->map(fn($keyword) => trim($keyword))
+                ->filter()
+                ->take(12)
+                ->values()
+                ->all();
+            $data['keywords'] = $keywords;
+        } else {
+            $data['keywords'] = [];
+        }
+
         // Handle hero image upload
         if ($request->hasFile('image_file')) {
             $path = $request->file('image_file')->store('businesses', 'public');
@@ -615,6 +625,10 @@ class BusinessesController extends Controller
         if ($request->hasFile('owner_image_file')) {
             $path = $request->file('owner_image_file')->store('businesses/owners', 'public');
             $data['owner_image_url'] = '/storage/' . $path;
+        }
+
+        if (isset($data['years_of_business']) && is_string($data['years_of_business'])) {
+            $data['years_of_business'] = trim($data['years_of_business']);
         }
 
         // Handle offer images
@@ -643,13 +657,8 @@ class BusinessesController extends Controller
         unset($data['geofence_radius']);
         unset($data['image_file']);
         unset($data['owner_image_file']);
-        // If pincode_id provided, set pincode text for compatibility and persist pincode_id
-        if ($request->filled('pincode_id')) {
-            $p = \App\Models\Pincode::find($request->input('pincode_id'));
-            if ($p) {
-                $data['pincode'] = $p->code;
-                $data['pincode_id'] = $p->id;
-            }
+        if (array_key_exists('pincode', $data)) {
+            $data['pincode'] = is_string($data['pincode']) ? trim($data['pincode']) : $data['pincode'];
         }
 
         $business->update($data);

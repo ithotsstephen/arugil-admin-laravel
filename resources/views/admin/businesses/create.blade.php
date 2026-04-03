@@ -117,7 +117,7 @@
             </div>
             <div>
                 <label>Years of Business</label>
-                <input type="number" name="years_of_business" value="{{ old('years_of_business') }}" placeholder="Enter years in business" min="0" max="150">
+                <input type="text" name="years_of_business" value="{{ old('years_of_business') }}" placeholder="Enter years in business">
             </div>
         </div>
 

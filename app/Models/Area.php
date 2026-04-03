@@ -11,7 +11,7 @@ class Area extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['city_id', 'district_id', 'name'];
+    protected $fillable = ['city_id', 'district_id', 'name', 'pincode'];
 
     public function city(): BelongsTo
     {

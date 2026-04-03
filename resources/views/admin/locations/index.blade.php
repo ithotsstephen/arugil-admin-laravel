@@ -200,50 +200,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5">No areas yet.</td>
-                </tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Pincodes -->
-    <div class="card">
-        <h3 style="margin-bottom: 16px;">Pincodes</h3>
-
-        <form method="POST" action="{{ route('admin.locations.pincodes.store') }}" style="margin-bottom: 16px;">
-            @csrf
-            <input type="text" name="code" placeholder="Pincode" required>
-            <button type="submit" class="btn btn-primary">Add Pincode</button>
-        </form>
-
-        <table>
-            <thead>
-            <tr>
-                <th>Pincode</th>
-                <th>City</th>
-                <th>District</th>
-                <th>Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            @forelse($pincodes as $p)
-                <tr>
-                    <td>{{ $p->code }}</td>
-                    <td>{{ $p->city?->name }}</td>
-                    <td>{{ $p->district?->name }}</td>
-                    <td class="actions">
-                        <button class="btn" onclick="editPincode({{ $p->id }}, '{{ $p->code }}')">Edit</button>
-                        <form method="POST" action="{{ route('admin.locations.pincodes.delete', $p) }}" style="display: inline;">
-                            @csrf
-                            @method('DELETE')
-                            <button class="btn" style="background: #ef4444;" onclick="return confirm('Delete this pincode?')">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="4">No pincodes yet.</td>
+                    <td colspan="4">No areas yet.</td>
                 </tr>
             @endforelse
             </tbody>
@@ -327,7 +284,6 @@
                 @endforeach
             </select>
             <input type="text" id="editAreaName" name="name" required>
-            <!-- pincode removed from Area editing; managed separately -->
             <div style="display: flex; gap: 8px; margin-top: 16px;">
                 <button type="submit" class="btn btn-primary">Update</button>
                 <button type="button" class="btn" onclick="closeModal('editAreaModal')">Cancel</button>
@@ -369,33 +325,5 @@ function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
 
-// Edit Pincode Modal
-function editPincode(id, code) {
-    // create modal if not exists
-    let modal = document.getElementById('editPincodeModal');
-        if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'editPincodeModal';
-        modal.style = 'display:none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index:1000;';
-        modal.innerHTML = `
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 24px; border-radius: 12px; min-width: 400px;">
-                <h3>Edit Pincode</h3>
-                <form id="editPincodeForm" method="POST">
-                    @csrf
-                    @method('PUT')
-                    <input type="text" id="editPincodeCode" name="code" required>
-                    <div style="display: flex; gap: 8px; margin-top: 16px;">
-                        <button type="submit" class="btn btn-primary">Update</button>
-                        <button type="button" class="btn" onclick="closeModal('editPincodeModal')">Cancel</button>
-                    </div>
-                </form>
-            </div>`;
-        document.body.appendChild(modal);
-    }
-
-    document.getElementById('editPincodeForm').action = `/admin/locations/pincodes/${id}`;
-    document.getElementById('editPincodeCode').value = code;
-    modal.style.display = 'block';
-}
 </script>
 @endsection

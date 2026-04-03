@@ -419,7 +419,7 @@
                 <span>👁 {{ $business->views }} views</span>
                 @if($business->years_of_business)
                     <span style="margin: 0 8px;">•</span>
-                    <span>📅 {{ $business->years_of_business }} {{ Str::plural('year', $business->years_of_business) }} in business</span>
+                    <span>📅 {{ $business->years_of_business }}</span>
                 @endif
             </div>
         </div>

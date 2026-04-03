@@ -86,10 +86,6 @@ Route::prefix('admin')
             
             // Locations management
             Route::get('/locations', [\App\Http\Controllers\Admin\LocationsController::class, 'index'])->name('locations.index');
-            // Pincodes
-            Route::post('/locations/pincodes', [\App\Http\Controllers\Admin\LocationsController::class, 'storePincode'])->name('locations.pincodes.store');
-            Route::put('/locations/pincodes/{pincode}', [\App\Http\Controllers\Admin\LocationsController::class, 'updatePincode'])->name('locations.pincodes.update');
-            Route::delete('/locations/pincodes/{pincode}', [\App\Http\Controllers\Admin\LocationsController::class, 'deletePincode'])->name('locations.pincodes.delete');
             Route::post('/locations/states', [\App\Http\Controllers\Admin\LocationsController::class, 'storeState'])->name('locations.states.store');
             Route::put('/locations/states/{state}', [\App\Http\Controllers\Admin\LocationsController::class, 'updateState'])->name('locations.states.update');
             Route::delete('/locations/states/{state}', [\App\Http\Controllers\Admin\LocationsController::class, 'deleteState'])->name('locations.states.delete');
@@ -105,7 +101,6 @@ Route::prefix('admin')
             Route::get('/api/locations/cities', [\App\Http\Controllers\Admin\LocationsController::class, 'getCities'])->name('locations.cities.get');
             Route::get('/api/locations/districts', [\App\Http\Controllers\Admin\LocationsController::class, 'getDistricts'])->name('locations.districts.get');
             Route::get('/api/locations/areas', [\App\Http\Controllers\Admin\LocationsController::class, 'getAreas'])->name('locations.areas.get');
-            Route::get('/api/locations/pincodes', [\App\Http\Controllers\Admin\LocationsController::class, 'getPincodes'])->name('locations.pincodes.get');
         });
         
         // Business routes - accessible by managers too

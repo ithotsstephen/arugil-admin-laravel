@@ -104,9 +104,13 @@
             </div>
             <div>
                 <label>Years of Business</label>
-                <input type="number" name="years_of_business" value="{{ old('years_of_business', $business->years_of_business) }}" placeholder="Enter years in business" min="0" max="150">
+                <input type="text" name="years_of_business" value="{{ old('years_of_business', $business->years_of_business) }}" placeholder="Enter years in business">
             </div>
         </div>
+
+        <label>Keywords <span style="font-size:12px; color:#888;">(up to 12, separated by commas)</span></label>
+        <input type="text" name="keywords" value="{{ old('keywords', is_array($business->keywords) ? implode(', ', $business->keywords) : '') }}" placeholder="e.g. restaurant, cafe, pizza, delivery" maxlength="255">
+        <p class="muted" style="font-size:12px; margin-bottom:16px;">Enter up to 12 keywords separated by commas. Example: pizza, pasta, Italian, delivery</p>
 
         <label>Owner DP Image</label>
         @if($business->owner_image_url)
