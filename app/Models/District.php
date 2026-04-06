@@ -23,6 +23,11 @@ class District extends Model
         return $this->hasMany(Business::class);
     }
 
+    public function cities(): HasMany
+    {
+        return $this->hasMany(City::class);
+    }
+
     public function areas(): HasMany
     {
         return $this->hasMany(Area::class);

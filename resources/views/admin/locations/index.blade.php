@@ -4,7 +4,7 @@
 <div class="header">
     <div>
         <h2>Locations Management</h2>
-        <p class="muted">Manage states, cities, districts, and areas.</p>
+        <p class="muted">Manage states, districts, cities, and areas.</p>
     </div>
 </div>
 
@@ -58,53 +58,6 @@
         </table>
     </div>
 
-    <!-- Cities -->
-    <div class="card">
-        <h3 style="margin-bottom: 16px;">Cities</h3>
-        
-        <form method="POST" action="{{ route('admin.locations.cities.store') }}" style="margin-bottom: 16px;">
-            @csrf
-            <select name="state_id" required>
-                <option value="">Select State</option>
-                @foreach($states as $state)
-                    <option value="{{ $state->id }}">{{ $state->name }}</option>
-                @endforeach
-            </select>
-            <input type="text" name="name" placeholder="City name" required>
-            <button type="submit" class="btn btn-primary">Add City</button>
-        </form>
-
-        <table>
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>State</th>
-                <th>Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            @forelse($cities as $city)
-                <tr>
-                    <td>{{ $city->name }}</td>
-                    <td>{{ $city->state->name }}</td>
-                    <td class="actions">
-                        <button class="btn" onclick="editCity({{ $city->id }}, {{ $city->state_id }}, '{{ $city->name }}')">Edit</button>
-                        <form method="POST" action="{{ route('admin.locations.cities.delete', $city) }}" style="display: inline;">
-                            @csrf
-                            @method('DELETE')
-                            <button class="btn" style="background: #ef4444;" onclick="return confirm('Delete this city?')">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="3">No cities yet.</td>
-                </tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
-
     <!-- Districts -->
     <div class="card">
         <h3 style="margin-bottom: 16px;">Districts</h3>
@@ -152,24 +105,73 @@
         </table>
     </div>
 
-    <!-- Areas -->
+    <!-- Cities/Town -->
     <div class="card">
-        <h3 style="margin-bottom: 16px;">Areas</h3>
+        <h3 style="margin-bottom: 16px;">Cities/Town</h3>
         
-        <form method="POST" action="{{ route('admin.locations.areas.store') }}" style="margin-bottom: 16px;">
+        <form method="POST" action="{{ route('admin.locations.cities.store') }}" style="margin-bottom: 16px;">
             @csrf
-            <select name="city_id" required>
-                <option value="">Select City</option>
-                @foreach($cities as $city)
-                    <option value="{{ $city->id }}">{{ $city->name }} ({{ $city->state->name }})</option>
-                @endforeach
-            </select>
             <select name="district_id" required>
                 <option value="">Select District</option>
                 @foreach($districts as $district)
                     <option value="{{ $district->id }}">{{ $district->name }} ({{ $district->state->name }})</option>
                 @endforeach
             </select>
+            <input type="text" name="name" placeholder="City name" required>
+            <button type="submit" class="btn btn-primary">Add City</button>
+        </form>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>District</th>
+                <th>State</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            @forelse($cities as $city)
+                <tr>
+                    <td>{{ $city->name }}</td>
+                    <td>{{ $city->district?->name ?? 'Not mapped' }}</td>
+                    <td>{{ $city->state->name }}</td>
+                    <td class="actions">
+                        <button class="btn" onclick="editCity({{ $city->id }}, {{ $city->district_id ?? 'null' }}, '{{ $city->name }}')">Edit</button>
+                        <form method="POST" action="{{ route('admin.locations.cities.delete', $city) }}" style="display: inline;">
+                            @csrf
+                            @method('DELETE')
+                            <button class="btn" style="background: #ef4444;" onclick="return confirm('Delete this city?')">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="4">No cities yet.</td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Areas -->
+    <div class="card">
+        <h3 style="margin-bottom: 16px;">Areas</h3>
+        
+        <form method="POST" action="{{ route('admin.locations.areas.store') }}" style="margin-bottom: 16px;">
+            @csrf
+            <select name="city_id" id="areaCitySelect" onchange="syncAreaDistrict('areaCitySelect', 'areaDistrictInput', 'areaDistrictHint')" required>
+                <option value="">Select City/Town</option>
+                @foreach($cities as $city)
+                    <option
+                        value="{{ $city->id }}"
+                        data-district-id="{{ $city->district_id ?? '' }}"
+                        data-district-name="{{ $city->district?->name ?? 'Not mapped' }}"
+                    >{{ $city->name }} ({{ $city->district?->name ?? 'Not mapped' }})</option>
+                @endforeach
+            </select>
+            <input type="hidden" name="district_id" id="areaDistrictInput">
+            <p id="areaDistrictHint" class="muted" style="font-size: 12px; margin-top: -8px; margin-bottom: 12px;">Area is mapped to the selected City/Town. District is derived automatically.</p>
             <input type="text" name="name" placeholder="Area name" required>
             <button type="submit" class="btn btn-primary">Add Area</button>
         </form>
@@ -178,7 +180,7 @@
             <thead>
             <tr>
                 <th>Name</th>
-                <th>City</th>
+                <th>City/Town</th>
                 <th>District</th>
                 <th>Actions</th>
             </tr>
@@ -190,7 +192,7 @@
                     <td>{{ $area->city->name }}</td>
                     <td>{{ $area->district->name }}</td>
                     <td class="actions">
-                        <button class="btn" onclick="editArea({{ $area->id }}, {{ $area->city_id }}, {{ $area->district_id }}, '{{ $area->name }}')">Edit</button>
+                        <button class="btn" onclick="editArea({{ $area->id }}, {{ $area->city_id }}, {{ $area->district_id }}, '{{ $area->district->name }}', '{{ $area->name }}')">Edit</button>
                         <form method="POST" action="{{ route('admin.locations.areas.delete', $area) }}" style="display: inline;">
                             @csrf
                             @method('DELETE')
@@ -231,9 +233,10 @@
         <form id="editCityForm" method="POST">
             @csrf
             @method('PUT')
-            <select id="editCityState" name="state_id" required>
-                @foreach($states as $state)
-                    <option value="{{ $state->id }}">{{ $state->name }}</option>
+            <select id="editCityDistrict" name="district_id" required>
+                <option value="">Select District</option>
+                @foreach($districts as $district)
+                    <option value="{{ $district->id }}">{{ $district->name }} ({{ $district->state->name }})</option>
                 @endforeach
             </select>
             <input type="text" id="editCityName" name="name" required>
@@ -273,16 +276,17 @@
         <form id="editAreaForm" method="POST">
             @csrf
             @method('PUT')
-            <select id="editAreaCity" name="city_id" required>
+            <select id="editAreaCity" name="city_id" onchange="syncAreaDistrict('editAreaCity', 'editAreaDistrict', 'editAreaDistrictHint')" required>
                 @foreach($cities as $city)
-                    <option value="{{ $city->id }}">{{ $city->name }} ({{ $city->state->name }})</option>
+                    <option
+                        value="{{ $city->id }}"
+                        data-district-id="{{ $city->district_id ?? '' }}"
+                        data-district-name="{{ $city->district?->name ?? 'Not mapped' }}"
+                    >{{ $city->name }} ({{ $city->district?->name ?? 'Not mapped' }})</option>
                 @endforeach
             </select>
-            <select id="editAreaDistrict" name="district_id" required>
-                @foreach($districts as $district)
-                    <option value="{{ $district->id }}">{{ $district->name }} ({{ $district->state->name }})</option>
-                @endforeach
-            </select>
+            <input type="hidden" id="editAreaDistrict" name="district_id" required>
+            <p id="editAreaDistrictHint" class="muted" style="font-size: 12px; margin-top: -8px; margin-bottom: 12px;">Area is mapped to the selected City/Town. District is derived automatically.</p>
             <input type="text" id="editAreaName" name="name" required>
             <div style="display: flex; gap: 8px; margin-top: 16px;">
                 <button type="submit" class="btn btn-primary">Update</button>
@@ -299,9 +303,9 @@ function editState(id, name) {
     document.getElementById('editStateModal').style.display = 'block';
 }
 
-function editCity(id, stateId, name) {
+function editCity(id, districtId, name) {
     document.getElementById('editCityForm').action = `/admin/locations/cities/${id}`;
-    document.getElementById('editCityState').value = stateId;
+    document.getElementById('editCityDistrict').value = districtId ?? '';
     document.getElementById('editCityName').value = name;
     document.getElementById('editCityModal').style.display = 'block';
 }
@@ -313,17 +317,41 @@ function editDistrict(id, stateId, name) {
     document.getElementById('editDistrictModal').style.display = 'block';
 }
 
-function editArea(id, cityId, districtId, name) {
+function syncAreaDistrict(citySelectId, districtInputId, hintId, fallbackDistrictId = '', fallbackDistrictName = '') {
+    const citySelect = document.getElementById(citySelectId);
+    const districtInput = document.getElementById(districtInputId);
+    const hint = document.getElementById(hintId);
+    const selectedOption = citySelect?.options[citySelect.selectedIndex];
+    const districtId = selectedOption?.dataset.districtId || fallbackDistrictId || '';
+    const districtName = selectedOption?.dataset.districtName || fallbackDistrictName || 'Not mapped';
+
+    if (districtInput) {
+        districtInput.value = districtId;
+    }
+
+    if (hint) {
+        hint.textContent = districtId
+            ? `Mapped District: ${districtName}`
+            : '';
+        hint.style.color = districtId ? '' : '#b45309';
+    }
+}
+
+function editArea(id, cityId, districtId, districtName, name) {
     document.getElementById('editAreaForm').action = `/admin/locations/areas/${id}`;
     document.getElementById('editAreaCity').value = cityId;
-    document.getElementById('editAreaDistrict').value = districtId;
     document.getElementById('editAreaName').value = name;
+    syncAreaDistrict('editAreaCity', 'editAreaDistrict', 'editAreaDistrictHint', districtId, districtName);
     document.getElementById('editAreaModal').style.display = 'block';
 }
 
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    syncAreaDistrict('areaCitySelect', 'areaDistrictInput', 'areaDistrictHint');
+});
 
 </script>
 @endsection

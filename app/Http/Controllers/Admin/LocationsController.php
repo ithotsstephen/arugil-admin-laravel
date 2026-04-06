@@ -14,7 +14,7 @@ class LocationsController extends Controller
     public function index()
     {
         $states = State::withCount(['cities', 'areas', 'districts', 'businesses'])->orderBy('name')->get();
-        $cities = City::with('state')->withCount(['businesses'])->orderBy('name')->get();
+        $cities = City::with(['state', 'district'])->withCount(['businesses'])->orderBy('name')->get();
         $areas = Area::with(['city.state', 'district'])->withCount(['businesses'])->orderBy('name')->get();
         $districts = District::with('state')->withCount('businesses')->orderBy('name')->get();
 
@@ -55,11 +55,17 @@ class LocationsController extends Controller
     public function storeCity(Request $request)
     {
         $data = $request->validate([
-            'state_id' => ['required', 'exists:states,id'],
+            'district_id' => ['required', 'exists:districts,id'],
             'name' => ['required', 'string', 'max:255'],
         ]);
 
-        City::create($data);
+        $district = District::findOrFail($data['district_id']);
+
+        City::create([
+            'state_id' => $district->state_id,
+            'district_id' => $district->id,
+            'name' => $data['name'],
+        ]);
 
         return redirect()->route('admin.locations.index')->with('status', 'City added successfully.');
     }
@@ -67,11 +73,17 @@ class LocationsController extends Controller
     public function updateCity(Request $request, City $city)
     {
         $data = $request->validate([
-            'state_id' => ['required', 'exists:states,id'],
+            'district_id' => ['required', 'exists:districts,id'],
             'name' => ['required', 'string', 'max:255'],
         ]);
 
-        $city->update($data);
+        $district = District::findOrFail($data['district_id']);
+
+        $city->update([
+            'state_id' => $district->state_id,
+            'district_id' => $district->id,
+            'name' => $data['name'],
+        ]);
 
         return redirect()->route('admin.locations.index')->with('status', 'City updated successfully.');
     }
@@ -121,9 +133,12 @@ class LocationsController extends Controller
 
         $data = $request->validate([
             'city_id' => ['required', 'exists:cities,id'],
-            'district_id' => ['required', 'exists:districts,id'],
             'name' => ['required', 'string', 'max:255'],
         ]);
+
+        $city = City::findOrFail($data['city_id']);
+
+        $data['district_id'] = $city->district_id;
 
         Area::create($data);
 
@@ -134,9 +149,12 @@ class LocationsController extends Controller
     {
         $data = $request->validate([
             'city_id' => ['required', 'exists:cities,id'],
-            'district_id' => ['required', 'exists:districts,id'],
             'name' => ['required', 'string', 'max:255'],
         ]);
+
+        $city = City::findOrFail($data['city_id']);
+
+        $data['district_id'] = $city->district_id;
 
         $area->update($data);
 
@@ -153,7 +171,13 @@ class LocationsController extends Controller
     // AJAX endpoints for cascading dropdowns
     public function getCities(Request $request)
     {
-        $cities = City::where('state_id', $request->state_id)
+        $cities = City::query()
+            ->when($request->filled('state_id'), function ($query) use ($request) {
+                $query->where('state_id', $request->state_id);
+            })
+            ->when($request->filled('district_id'), function ($query) use ($request) {
+                $query->where('district_id', $request->district_id);
+            })
             ->orderBy('name')
             ->get(['id', 'name']);
 

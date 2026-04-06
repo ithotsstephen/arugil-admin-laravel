@@ -18,8 +18,8 @@ class AppServiceProvider extends ServiceProvider
         // so the error/solution tooling can resolve the contract even if the
         // package service provider was not auto-discovered or registered.
         if (class_exists(SolutionProviderRepository::class)
-            && class_exists(SolutionProviderRepositoryContract::class)
-            && ! $this->app->has(SolutionProviderRepositoryContract::class)) {
+            && interface_exists(SolutionProviderRepositoryContract::class)
+            && ! $this->app->bound(SolutionProviderRepositoryContract::class)) {
             $this->app->singleton(SolutionProviderRepositoryContract::class, function () {
                 return new SolutionProviderRepository();
             });
@@ -28,7 +28,9 @@ class AppServiceProvider extends ServiceProvider
         // Also register the solution provider in Spatie's Flare container so
         // packages that use the Flare container (instead of the Laravel
         // container) can resolve the SolutionProviderRepository contract.
-        if (class_exists(FlareContainer::class)) {
+        if (class_exists(FlareContainer::class)
+            && interface_exists(SolutionProviderRepositoryContract::class)
+            && class_exists(SolutionProviderRepository::class)) {
             $flare = FlareContainer::instance();
             if (! $flare->has(SolutionProviderRepositoryContract::class)) {
                 $flare->singleton(SolutionProviderRepositoryContract::class, function () {

@@ -47,7 +47,7 @@
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-items: start;">
             <div>
                 <label>State</label>
-                <select name="state_id" id="state_select" onchange="loadCities(true)">
+                <select name="state_id" id="state_select" onchange="loadDistricts(true)">
                     <option value="">Select State</option>
                     @foreach($states as $state)
                         <option value="{{ $state->id }}" {{ old('state_id') == $state->id ? 'selected' : '' }}>{{ $state->name }}</option>
@@ -56,26 +56,32 @@
             </div>
 
             <div>
-                <label>City</label>
-                <select name="city_id" id="city_select" onchange="loadAreas(true)">
-                    <option value="">Select City</option>
-                </select>
-            </div>
-
-            <div>
-                <label>Area</label>
-                <select name="area_id" id="area_select">
-                    <option value="">Select Area</option>
-                    @foreach($areas as $area)
-                        <option value="{{ $area->id }}" {{ old('area_id') == $area->id ? 'selected' : '' }}>{{ $area->name }}</option>
+                <label>District</label>
+                <select name="district_id" id="district_select" data-selected="{{ old('district_id') }}" onchange="loadCities(true)">
+                    <option value="">Select District</option>
+                    @foreach($districts as $district)
+                        <option value="{{ $district->id }}" {{ old('district_id') == $district->id ? 'selected' : '' }}>{{ $district->name }}</option>
                     @endforeach
                 </select>
             </div>
 
             <div>
-                <label>District</label>
-                <select name="district_id" id="district_select" onchange="loadAreas(true)">
-                    <option value="">Select District</option>
+                <label>City / Town</label>
+                <select name="city_id" id="city_select" data-selected="{{ old('city_id') }}" onchange="loadAreas(true)">
+                    <option value="">Select City</option>
+                    @foreach($cities as $city)
+                        <option value="{{ $city->id }}" {{ old('city_id') == $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label>Area</label>
+                <select name="area_id" id="area_select" data-selected="{{ old('area_id') }}" onchange="setPincodeFromArea()">
+                    <option value="">Select Area</option>
+                    @foreach($areas as $area)
+                        <option value="{{ $area->id }}" data-pincode="{{ $area->pincode }}" {{ old('area_id') == $area->id ? 'selected' : '' }}>{{ $area->name }}</option>
+                    @endforeach
                 </select>
             </div>
 
@@ -701,34 +707,31 @@ function removeProduct(btn) {
     btn.closest('.product-item').remove();
 }
 
-function loadCities(force = false) {
+function getSelectedValue(elementId) {
+    const element = document.getElementById(elementId);
+
+    return element ? (element.dataset.selected || element.value || '') : '';
+}
+
+function loadDistricts(force = false) {
     const stateId = document.getElementById('state_select').value;
+    const districtSelect = document.getElementById('district_select');
     const citySelect = document.getElementById('city_select');
     const areaSelect = document.getElementById('area_select');
-    const districtSelect = document.getElementById('district_select');
-    const pincodeSelect = document.getElementById('pincode_select');
+    const selectedDistrict = getSelectedValue('district_select');
 
-    // If cities already populated server-side and not forced, skip network call
-    if (!force && citySelect && citySelect.options && citySelect.options.length > 1) {
+    if (!force && districtSelect && districtSelect.options && districtSelect.options.length > 1) {
+        if (selectedDistrict || districtSelect.value) {
+            loadCities(false);
+        }
         return;
     }
 
-    citySelect.innerHTML = '<option value="">Select City</option>';
-    areaSelect.innerHTML = '<option value="">Select Area</option>';
     districtSelect.innerHTML = '<option value="">Select District</option>';
+    citySelect.innerHTML = '<option value="">Select City / Town</option>';
+    areaSelect.innerHTML = '<option value="">Select Area</option>';
 
     if (!stateId) return;
-
-    fetch(`/admin/api/locations/cities?state_id=${stateId}`, { credentials: 'same-origin' })
-        .then(response => response.json())
-        .then(cities => {
-            cities.forEach(city => {
-                const option = document.createElement('option');
-                option.value = city.id;
-                option.textContent = city.name;
-                citySelect.appendChild(option);
-            });
-        });
 
     fetch(`/admin/api/locations/districts?state_id=${stateId}`, { credentials: 'same-origin' })
         .then(response => response.json())
@@ -737,30 +740,76 @@ function loadCities(force = false) {
                 const option = document.createElement('option');
                 option.value = district.id;
                 option.textContent = district.name;
+                if (String(district.id) === String(selectedDistrict)) {
+                    option.selected = true;
+                }
                 districtSelect.appendChild(option);
             });
-        });
 
-    // pincodes are free-text; no AJAX load required
+            districtSelect.dataset.selected = '';
+
+            if (selectedDistrict || districtSelect.value) {
+                loadCities(false);
+            }
+        });
 }
 
+function loadCities(force = false) {
+    const stateId = document.getElementById('state_select').value;
+    const districtId = document.getElementById('district_select').value;
+    const citySelect = document.getElementById('city_select');
+    const areaSelect = document.getElementById('area_select');
+    const selectedCity = getSelectedValue('city_select');
 
-// After areas load, also load pincodes filtered by city/district so pincodes remain independent
+    if (!force && citySelect && citySelect.options && citySelect.options.length > 1) {
+        if (selectedCity || citySelect.value) {
+            loadAreas(false);
+        }
+        return;
+    }
+
+    citySelect.innerHTML = '<option value="">Select City / Town</option>';
+    areaSelect.innerHTML = '<option value="">Select Area</option>';
+
+    if (!stateId || !districtId) return;
+
+    const params = new URLSearchParams({ state_id: stateId, district_id: districtId });
+
+    fetch(`/admin/api/locations/cities?${params.toString()}`, { credentials: 'same-origin' })
+        .then(response => response.json())
+        .then(cities => {
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city.id;
+                option.textContent = city.name;
+                if (String(city.id) === String(selectedCity)) {
+                    option.selected = true;
+                }
+                citySelect.appendChild(option);
+            });
+
+            citySelect.dataset.selected = '';
+
+            if (selectedCity || citySelect.value) {
+                loadAreas(false);
+            }
+        });
+}
+
 function loadAreas(force = false) {
     const cityId = document.getElementById('city_select').value;
     const districtId = document.getElementById('district_select').value;
     const areaSelect = document.getElementById('area_select');
-    const pincodeSelect = document.getElementById('pincode_select');
+    const selectedArea = getSelectedValue('area_select');
 
-    // If areas already populated and not forced, skip
     if (!force && areaSelect && areaSelect.options && areaSelect.options.length > 1) {
+        setPincodeFromArea();
         return;
     }
 
     areaSelect.innerHTML = '<option value="">Select Area</option>';
-    if (pincodeSelect) pincodeSelect.innerHTML = '<option value="">Select Pincode</option>';
 
-    if (!cityId && !districtId) return;
+    if (!cityId || !districtId) return;
 
     const params = new URLSearchParams();
     if (cityId) params.append('city_id', cityId);
@@ -773,10 +822,15 @@ function loadAreas(force = false) {
                 const option = document.createElement('option');
                 option.value = area.id;
                 option.textContent = area.name;
+                option.dataset.pincode = area.pincode || '';
+                if (String(area.id) === String(selectedArea)) {
+                    option.selected = true;
+                }
                 areaSelect.appendChild(option);
             });
 
-            // Keep pincode independent: do not filter by city/district here
+            areaSelect.dataset.selected = '';
+            setPincodeFromArea();
         });
 }
 
@@ -859,5 +913,11 @@ async function saveSection(section) {
         console.error(e);
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('state_select').value) {
+        loadDistricts(false);
+    }
+});
 </script>
 @endsection

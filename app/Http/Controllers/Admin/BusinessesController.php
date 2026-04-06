@@ -99,6 +99,8 @@ class BusinessesController extends Controller
     {
         $categories = \App\Models\Category::with('children')->whereNull('parent_id')->get();
         $states = \App\Models\State::orderBy('name')->get();
+        $districts = collect();
+        $cities = collect();
         $areas = collect();
         // pincodes table was removed in some migration paths; guard the query
         if (\Illuminate\Support\Facades\Schema::hasTable('pincodes')) {
@@ -106,7 +108,7 @@ class BusinessesController extends Controller
         } else {
             $pincodes = collect();
         }
-        return view('admin.businesses.create', compact('categories', 'states', 'areas', 'pincodes'));
+        return view('admin.businesses.create', compact('categories', 'states', 'districts', 'cities', 'areas', 'pincodes'));
     }
 
     /**
@@ -542,13 +544,20 @@ class BusinessesController extends Controller
     {
         $categories = \App\Models\Category::with('children')->whereNull('parent_id')->get();
         $states = \App\Models\State::orderBy('name')->get();
-        $cities = $business->state_id ? \App\Models\City::where('state_id', $business->state_id)->orderBy('name')->get() : collect();
+        $districts = $business->state_id
+            ? \App\Models\District::where('state_id', $business->state_id)->orderBy('name')->get()
+            : collect();
+        $cities = \App\Models\City::query()
+            ->when($business->state_id, fn ($query) => $query->where('state_id', $business->state_id))
+            ->when($business->district_id, fn ($query) => $query->where('district_id', $business->district_id))
+            ->orderBy('name')
+            ->get();
         $areas = \App\Models\Area::query()
             ->when($business->city_id, fn ($q) => $q->where('city_id', $business->city_id))
             ->when($business->district_id, fn ($q) => $q->where('district_id', $business->district_id))
             ->orderBy('name')
             ->get();
-        $districts = $business->state_id ? \App\Models\District::where('state_id', $business->state_id)->orderBy('name')->get() : collect();
+
         return view('admin.businesses.edit', compact('business', 'categories', 'states', 'cities', 'districts', 'areas'));
     }
 
