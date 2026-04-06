@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\BusinessController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmergencyController;
 use App\Http\Controllers\Api\V1\JobController;
+use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -139,8 +140,12 @@ Route::prefix('v1')->group(function () {
 
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('categories/{category}/businesses', [CategoryController::class, 'businesses']);
+    Route::get('districts', [LocationController::class, 'districts']);
+    Route::get('districts/{district}/areas', [LocationController::class, 'areas']);
 
     Route::middleware('throttle:60,1')->get('businesses', [BusinessController::class, 'index']);
+    Route::get('businesses/search', [BusinessController::class, 'search']);
+    Route::get('areas/{area}/businesses', [BusinessController::class, 'byArea']);
     Route::get('businesses/{business}', [BusinessController::class, 'show']);
     Route::get('featured', [BusinessController::class, 'featured']);
     Route::get('nearby', [BusinessController::class, 'nearby']);

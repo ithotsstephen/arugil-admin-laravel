@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
 use App\Models\Business;
 use App\Models\BusinessImage;
+use App\Models\Category;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class BusinessController extends Controller
 {
@@ -36,12 +40,7 @@ class BusinessController extends Controller
 
         // Cache for 60 minutes
         $result = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($request, $perPage, $sort, $allowedSort) {
-            $query = Business::query()
-                ->where('is_approved', true)
-                ->where(function($q) {
-                    $q->whereNull('expiry_date')
-                      ->orWhere('expiry_date', '>=', now());
-                });
+            $query = $this->approvedBusinessesQuery();
 
             // Accept both legacy params and `filter[...]` style
             $filters = $request->input('filter', []);
@@ -50,13 +49,7 @@ class BusinessController extends Controller
             }
 
             $categoryId = $filters['category'] ?? $request->input('category_id');
-            if ($categoryId) {
-                // Include businesses in the category AND all its subcategories
-                $categoryIds = \App\Models\Category::where('id', (int) $categoryId)
-                    ->orWhere('parent_id', (int) $categoryId)
-                    ->pluck('id');
-                $query->whereIn('category_id', $categoryIds);
-            }
+            $this->applyCategoryFilters($query, $categoryId ? (int) $categoryId : null, null);
 
             // Normalize featured boolean from filter[...] or top-level param
             $featured = null;
@@ -72,20 +65,7 @@ class BusinessController extends Controller
 
             // Lightweight search: name, keywords, category
             if ($request->filled('q')) {
-                $search = trim($request->string('q')->toString());
-                if ($search !== '') {
-                    $term = mb_strtolower($search, 'UTF-8');
-                    $like = "%{$term}%";
-
-                    $query->where(function ($q) use ($like) {
-                                        $q->whereRaw('LOWER(name) LIKE ?', [$like])
-                                            ->orWhereRaw('LOWER(COALESCE(keywords::text, \'\')) LIKE ?', [$like])
-                                            ->orWhereRaw('LOWER(COALESCE(description, \'\')) LIKE ?', [$like])
-                                            ->orWhereHas('category', function ($cq) use ($like) {
-                                                    $cq->whereRaw('LOWER(name) LIKE ?', [$like]);
-                                            });
-                    });
-                }
+                $this->applySearchFilter($query, $request->string('q')->toString());
             }
 
             // Sorting: support -field desc syntax and friendly aliases, but whitelist fields
@@ -114,27 +94,70 @@ class BusinessController extends Controller
                     $query->orderBy($sortRequested, $direction);
                 }
             }
-            $paginator = $query->with(['category', 'owner'])->withCount('likes')->paginate($perPage);
+            $paginator = $query
+                ->with(['category.parent', 'owner', 'area', 'district'])
+                ->withCount('likes')
+                ->paginate($perPage)
+                ->withQueryString();
 
             return $paginator;
         });
 
-        // $result is a LengthAwarePaginator instance
-        $payload = [
-            'success' => true,
-            'data' => $result->items(),
-            'meta' => [
-                'current_page' => $result->currentPage(),
-                'per_page' => $result->perPage(),
-                'total' => $result->total(),
-                'last_page' => $result->lastPage(),
-                'next_page_url' => $result->nextPageUrl(),
-                'prev_page_url' => $result->previousPageUrl(),
-            ],
-        ];
-
-        return response()->json($payload)
+        return $this->paginatedResponse($result)
             ->header('Cache-Control', 'public, max-age=3600');
+    }
+
+    public function byArea(Request $request, Area $area)
+    {
+        $validated = $request->validate([
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'subcategory_id' => ['nullable', 'integer', 'exists:categories,id'],
+        ]);
+
+        $paginator = $this->approvedBusinessesQuery()
+            ->where('area_id', $area->id)
+            ->tap(function (Builder $query) use ($validated) {
+                $this->applyCategoryFilters(
+                    $query,
+                    $validated['category_id'] ?? null,
+                    $validated['subcategory_id'] ?? null
+                );
+            })
+            ->with(['category.parent', 'owner', 'area', 'district'])
+            ->withCount('likes')
+            ->orderBy('name')
+            ->paginate((int) ($validated['per_page'] ?? 20))
+            ->withQueryString();
+
+        return $this->paginatedResponse($paginator);
+    }
+
+    public function search(Request $request)
+    {
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $search = trim($validated['q']);
+
+        $query = $this->approvedBusinessesQuery();
+        $this->applySearchFilter($query, $search);
+
+        $like = '%' . mb_strtolower($search, 'UTF-8') . '%';
+
+        $paginator = $query
+            ->with(['category.parent', 'owner', 'area', 'district'])
+            ->withCount('likes')
+            ->orderByRaw("CASE WHEN LOWER(COALESCE(businesses.name, '')) LIKE ? THEN 0 ELSE 1 END", [$like])
+            ->orderBy('businesses.name')
+            ->paginate((int) ($validated['per_page'] ?? 20))
+            ->withQueryString();
+
+        return $this->paginatedResponse($paginator);
     }
 
     public function show(\Illuminate\Http\Request $request, Business $business)
@@ -259,9 +282,109 @@ class BusinessController extends Controller
 
     private function categoryRequiresSubcategory(int $categoryId): bool
     {
-        return \App\Models\Category::whereKey($categoryId)
+        return Category::whereKey($categoryId)
             ->whereHas('children')
             ->exists();
+    }
+
+    private function approvedBusinessesQuery(): Builder
+    {
+        return Business::query()
+            ->where('is_approved', true)
+            ->where(function (Builder $query) {
+                $query->whereNull('expiry_date')
+                    ->orWhere('expiry_date', '>=', now());
+            });
+    }
+
+    private function applyCategoryFilters(Builder $query, ?int $categoryId, ?int $subcategoryId): void
+    {
+        if ($subcategoryId) {
+            $query->where('category_id', $subcategoryId);
+
+            return;
+        }
+
+        if (! $categoryId) {
+            return;
+        }
+
+        $categoryIds = Category::query()
+            ->where('id', $categoryId)
+            ->orWhere('parent_id', $categoryId)
+            ->pluck('id');
+
+        $query->whereIn('category_id', $categoryIds);
+    }
+
+    private function applySearchFilter(Builder $query, string $search): void
+    {
+        $search = trim($search);
+
+        if ($search === '') {
+            return;
+        }
+
+        $like = '%' . mb_strtolower($search, 'UTF-8') . '%';
+        $keywordsExpression = $this->searchableJsonTextExpression('keywords');
+        $servicesExpression = $this->searchableJsonTextExpression('services');
+        $offersExpression = $this->searchableJsonTextExpression('offers');
+
+        $query->where(function (Builder $builder) use ($like, $keywordsExpression, $servicesExpression, $offersExpression) {
+            $builder->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like])
+                ->orWhereRaw("LOWER(COALESCE(description, '')) LIKE ?", [$like])
+                ->orWhereRaw("LOWER(COALESCE(address, '')) LIKE ?", [$like])
+                ->orWhereRaw("LOWER(COALESCE(pincode, '')) LIKE ?", [$like])
+                ->orWhereRaw("LOWER(COALESCE(phone, '')) LIKE ?", [$like])
+                ->orWhereRaw("LOWER(COALESCE(whatsapp, '')) LIKE ?", [$like])
+                ->orWhereRaw("LOWER(COALESCE(email, '')) LIKE ?", [$like])
+                ->orWhereRaw("LOWER(COALESCE(owner_name, '')) LIKE ?", [$like])
+                ->orWhereRaw("LOWER({$keywordsExpression}) LIKE ?", [$like])
+                ->orWhereRaw("LOWER({$servicesExpression}) LIKE ?", [$like])
+                ->orWhereRaw("LOWER({$offersExpression}) LIKE ?", [$like])
+                ->orWhereHas('category', function (Builder $categoryQuery) use ($like) {
+                    $categoryQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like])
+                        ->orWhereHas('parent', function (Builder $parentQuery) use ($like) {
+                            $parentQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
+                        });
+                })
+                ->orWhereHas('city', function (Builder $cityQuery) use ($like) {
+                    $cityQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
+                })
+                ->orWhereHas('district', function (Builder $districtQuery) use ($like) {
+                    $districtQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
+                })
+                ->orWhereHas('area', function (Builder $areaQuery) use ($like) {
+                    $areaQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
+                });
+        });
+    }
+
+    private function searchableJsonTextExpression(string $column): string
+    {
+        $driver = Business::query()->getConnection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            return "COALESCE({$column}::text, '')";
+        }
+
+        return "COALESCE({$column}, '')";
+    }
+
+    private function paginatedResponse(LengthAwarePaginator $paginator)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+            ],
+        ]);
     }
 
     public function featured(Request $request)
