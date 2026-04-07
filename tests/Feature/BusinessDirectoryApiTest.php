@@ -10,6 +10,8 @@ use App\Models\District;
 use App\Models\State;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class BusinessDirectoryApiTest extends TestCase
@@ -66,10 +68,77 @@ class BusinessDirectoryApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.name', 'Aluva')
-            ->assertJsonPath('data.1.name', 'Edappally')
+            ->assertJsonCount(3, 'data')
+            ->assertJsonPath('data.0.id', 'all')
+            ->assertJsonPath('data.0.name', 'All areas')
+            ->assertJsonPath('data.0.is_all', true)
+            ->assertJsonPath('data.1.name', 'Aluva')
+            ->assertJsonPath('data.1.is_all', false)
+            ->assertJsonPath('data.2.name', 'Edappally')
             ->assertJsonMissing(['name' => 'Kodungallur']);
+    }
+
+    public function test_it_lists_district_businesses_when_all_areas_is_selected(): void
+    {
+        [$district, $city] = $this->createLocation();
+        $otherDistrict = District::create(['state_id' => $district->state_id, 'name' => 'Thrissur']);
+        $firstArea = Area::create([
+            'city_id' => $city->id,
+            'district_id' => $district->id,
+            'name' => 'Aluva',
+            'pincode' => '683101',
+        ]);
+        $secondArea = Area::create([
+            'city_id' => $city->id,
+            'district_id' => $district->id,
+            'name' => 'Edappally',
+            'pincode' => '682024',
+        ]);
+        $otherArea = Area::create([
+            'city_id' => $city->id,
+            'district_id' => $otherDistrict->id,
+            'name' => 'Kodungallur',
+            'pincode' => '680664',
+        ]);
+
+        $owner = User::factory()->create();
+        $category = Category::create(['name' => 'Services']);
+
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $category->id,
+            'district_id' => $district->id,
+            'area_id' => $secondArea->id,
+            'name' => 'Beta Services',
+            'is_approved' => true,
+        ]);
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $category->id,
+            'district_id' => $district->id,
+            'area_id' => $firstArea->id,
+            'name' => 'Alpha Services',
+            'is_approved' => true,
+        ]);
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $category->id,
+            'district_id' => $otherDistrict->id,
+            'area_id' => $otherArea->id,
+            'name' => 'Outside Services',
+            'is_approved' => true,
+        ]);
+
+        $response = $this->getJson("/api/v1/areas/all/businesses?district_id={$district->id}");
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.name', 'Alpha Services')
+            ->assertJsonPath('data.1.name', 'Beta Services')
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonMissing(['name' => 'Outside Services']);
     }
 
     public function test_it_lists_area_businesses_with_category_and_subcategory_filters(): void
@@ -189,6 +258,34 @@ class BusinessDirectoryApiTest extends TestCase
             ->assertJsonPath('data.0.name', 'Plumbing Pros')
             ->assertJsonPath('data.1.name', 'Ordinary Store')
             ->assertJsonPath('meta.total', 2);
+    }
+
+    public function test_it_accepts_webp_images_when_creating_products(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+
+        $category = Category::create(['name' => 'Services']);
+        $business = Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $category->id,
+            'name' => 'Alpha Services',
+            'is_approved' => true,
+        ]);
+
+        $webpImage = UploadedFile::fake()->createWithContent(
+            'pump.webp',
+            base64_decode('UklGRiIAAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=')
+        );
+
+        $response = $this->postJson("/api/v1/businesses/{$business->id}/products", [
+            'name' => 'Pump Set',
+            'image' => $webpImage,
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('name', 'Pump Set');
     }
 
     private function createLocation(): array

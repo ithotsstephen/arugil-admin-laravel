@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
 use App\Models\District;
 
 class LocationController extends Controller
@@ -32,11 +33,24 @@ class LocationController extends Controller
                 'id',
                 'name',
                 'district_id',
-            ]);
+            ])
+            ->map(function (Area $area) {
+                return [
+                    'id' => $area->id,
+                    'name' => $area->name,
+                    'district_id' => $area->district_id,
+                    'is_all' => false,
+                ];
+            });
 
         return response()->json([
             'success' => true,
-            'data' => $areas,
+            'data' => collect([[
+                'id' => 'all',
+                'name' => 'All areas',
+                'district_id' => $district->id,
+                'is_all' => true,
+            ]])->concat($areas)->values(),
         ]);
     }
 }

@@ -10,6 +10,7 @@ use App\Models\Category;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
@@ -107,17 +108,31 @@ class BusinessController extends Controller
             ->header('Cache-Control', 'public, max-age=3600');
     }
 
-    public function byArea(Request $request, Area $area)
+    public function byArea(Request $request, string $area)
     {
         $validated = $request->validate([
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
             'page' => ['nullable', 'integer', 'min:1'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'subcategory_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'district_id' => [
+                Rule::requiredIf($area === 'all'),
+                'nullable',
+                'integer',
+                'exists:districts,id',
+            ],
         ]);
 
         $paginator = $this->approvedBusinessesQuery()
-            ->where('area_id', $area->id)
+            ->tap(function (Builder $query) use ($area, $validated) {
+                if ($area === 'all') {
+                    $query->where('district_id', $validated['district_id']);
+
+                    return;
+                }
+
+                $query->where('area_id', Area::query()->findOrFail($area)->id);
+            })
             ->tap(function (Builder $query) use ($validated) {
                 $this->applyCategoryFilters(
                     $query,
@@ -196,9 +211,9 @@ class BusinessController extends Controller
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'image_url' => ['nullable', 'string', 'max:2048'],
-            'image' => ['nullable', 'image', 'max:5120'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'],
             'images' => ['nullable', 'array'],
-            'images.*' => ['image', 'max:5120'],
+            'images.*' => ['image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'],
         ]);
 
         $business = Business::create(array_merge($data, [
@@ -251,9 +266,9 @@ class BusinessController extends Controller
             'latitude' => ['sometimes', 'numeric'],
             'longitude' => ['sometimes', 'numeric'],
             'image_url' => ['sometimes', 'string', 'max:2048'],
-            'image' => ['nullable', 'image', 'max:5120'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'],
             'images' => ['nullable', 'array'],
-            'images.*' => ['image', 'max:5120'],
+            'images.*' => ['image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'],
             'is_featured' => ['sometimes', 'boolean'],
             'is_approved' => ['sometimes', 'boolean'],
         ]);
