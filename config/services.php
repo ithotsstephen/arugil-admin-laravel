@@ -50,5 +50,14 @@ return [
         'redirect' => env('TWITTER_REDIRECT'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'embedding_model' => env('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+        'embedding_dimensions' => env('OPENAI_EMBEDDING_DIMENSIONS') !== null
+            ? (int) env('OPENAI_EMBEDDING_DIMENSIONS')
+            : null,
+        'timeout' => (int) env('OPENAI_TIMEOUT', 20),
+    ],
+
 
 ];

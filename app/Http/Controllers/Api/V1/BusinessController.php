@@ -7,15 +7,22 @@ use App\Models\Area;
 use App\Models\Business;
 use App\Models\BusinessImage;
 use App\Models\Category;
+use App\Services\OpenAiEmbeddingSemanticSearchService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class BusinessController extends Controller
 {
+    public function __construct(
+        private OpenAiEmbeddingSemanticSearchService $semanticSearch,
+    ) {
+    }
+
     public function index(Request $request)
     {
         // Validate inputs to avoid invalid or malicious values
@@ -64,8 +71,21 @@ class BusinessController extends Controller
                 $query->where('is_featured', true);
             }
 
+            $semanticBaseQuery = clone $query;
+
             // Lightweight search: name, keywords, category
             if ($request->filled('q')) {
+                $semanticPaginator = $this->semanticSearchPaginator(
+                    $semanticBaseQuery,
+                    $request->string('q')->toString(),
+                    $perPage,
+                    (int) $request->input('page', 1)
+                );
+
+                if ($semanticPaginator instanceof LengthAwarePaginator) {
+                    return $semanticPaginator;
+                }
+
                 $this->applySearchFilter($query, $request->string('q')->toString());
             }
 
@@ -158,6 +178,19 @@ class BusinessController extends Controller
         ]);
 
         $search = trim($validated['q']);
+        $perPage = (int) ($validated['per_page'] ?? 20);
+        $page = (int) ($validated['page'] ?? 1);
+
+        $semanticPaginator = $this->semanticSearchPaginator(
+            $this->approvedBusinessesQuery(),
+            $search,
+            $perPage,
+            $page
+        );
+
+        if ($semanticPaginator instanceof LengthAwarePaginator) {
+            return $this->paginatedResponse($semanticPaginator);
+        }
 
         $query = $this->approvedBusinessesQuery();
         $this->applySearchFilter($query, $search);
@@ -169,7 +202,7 @@ class BusinessController extends Controller
             ->withCount('likes')
             ->orderByRaw("CASE WHEN LOWER(COALESCE(businesses.name, '')) LIKE ? THEN 0 ELSE 1 END", [$like])
             ->orderBy('businesses.name')
-            ->paginate((int) ($validated['per_page'] ?? 20))
+            ->paginate($perPage)
             ->withQueryString();
 
         return $this->paginatedResponse($paginator);
@@ -373,6 +406,70 @@ class BusinessController extends Controller
                     $areaQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
                 });
         });
+    }
+
+    private function semanticSearchPaginator(Builder $baseQuery, string $search, int $perPage, int $page): ?LengthAwarePaginator
+    {
+        if (! $this->semanticSearch->isConfigured()) {
+            return null;
+        }
+
+        $candidates = $this->semanticCandidates($baseQuery, $search);
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        $ranked = $this->semanticSearch->rankBusinesses($search, $candidates);
+
+        return $this->paginateCollection($ranked, $perPage, $page);
+    }
+
+    private function semanticCandidates(Builder $baseQuery, string $search): Collection
+    {
+        $relations = ['category.parent', 'owner', 'area', 'district', 'city'];
+        $like = '%' . mb_strtolower($search, 'UTF-8') . '%';
+
+        $lexicalQuery = clone $baseQuery;
+        $this->applySearchFilter($lexicalQuery, $search);
+
+        $lexical = $lexicalQuery
+            ->with($relations)
+            ->withCount('likes')
+            ->orderByRaw("CASE WHEN LOWER(COALESCE(businesses.name, '')) LIKE ? THEN 0 ELSE 1 END", [$like])
+            ->orderBy('businesses.name')
+            ->limit(30)
+            ->get();
+
+        $broad = (clone $baseQuery)
+            ->with($relations)
+            ->withCount('likes')
+            ->orderByDesc('is_featured')
+            ->orderByDesc('likes_count')
+            ->orderByDesc('created_at')
+            ->limit(30)
+            ->get();
+
+        return $lexical
+            ->concat($broad)
+            ->unique('id')
+            ->values();
+    }
+
+    private function paginateCollection(Collection $items, int $perPage, int $page): LengthAwarePaginator
+    {
+        $paginator = new LengthAwarePaginator(
+            $items->forPage($page, $perPage)->values(),
+            $items->count(),
+            $perPage,
+            $page,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'page',
+            ]
+        );
+
+        return $paginator->appends(request()->query());
     }
 
     private function searchableJsonTextExpression(string $column): string

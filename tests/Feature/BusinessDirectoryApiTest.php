@@ -11,6 +11,7 @@ use App\Models\State;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -260,6 +261,112 @@ class BusinessDirectoryApiTest extends TestCase
             ->assertJsonPath('meta.total', 2);
     }
 
+    public function test_it_uses_openai_embeddings_to_semantically_rank_business_search_results(): void
+    {
+        config()->set('services.openai.api_key', 'test-openai-key');
+        config()->set('services.openai.embedding_model', 'text-embedding-3-small');
+
+        [$district, $city] = $this->createLocation();
+        $area = Area::create([
+            'city_id' => $city->id,
+            'district_id' => $district->id,
+            'name' => 'Town Center',
+            'pincode' => '682003',
+        ]);
+
+        $owner = User::factory()->create();
+        $services = Category::create(['name' => 'Services']);
+        $plumbing = Category::create(['name' => 'Plumbing', 'parent_id' => $services->id]);
+        $decor = Category::create(['name' => 'Decor', 'parent_id' => $services->id]);
+
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $plumbing->id,
+            'district_id' => $district->id,
+            'city_id' => $city->id,
+            'area_id' => $area->id,
+            'name' => 'AquaFix Services',
+            'description' => 'Pipe leak repair, drain cleaning and bathroom plumbing.',
+            'services' => ['Leak repair', 'Pipe replacement'],
+            'is_approved' => true,
+        ]);
+
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $decor->id,
+            'district_id' => $district->id,
+            'city_id' => $city->id,
+            'area_id' => $area->id,
+            'name' => 'Canvas Decor Studio',
+            'description' => 'Interior styling and wall decor.',
+            'is_approved' => true,
+        ]);
+
+        $this->fakeEmbeddingResponses();
+
+        $response = $this->getJson('/api/v1/businesses/search?q=someone to fix a leaking kitchen sink');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.name', 'AquaFix Services')
+            ->assertJsonPath('meta.total', 2);
+    }
+
+    public function test_it_uses_openai_embeddings_to_semantically_rank_index_results_when_q_is_present(): void
+    {
+        config()->set('services.openai.api_key', 'test-openai-key');
+        config()->set('services.openai.embedding_model', 'text-embedding-3-small');
+
+        [$district, $city] = $this->createLocation();
+        $area = Area::create([
+            'city_id' => $city->id,
+            'district_id' => $district->id,
+            'name' => 'Town Center',
+            'pincode' => '682003',
+        ]);
+
+        $owner = User::factory()->create();
+        $services = Category::create(['name' => 'Services']);
+        $plumbing = Category::create(['name' => 'Plumbing', 'parent_id' => $services->id]);
+        $decor = Category::create(['name' => 'Decor', 'parent_id' => $services->id]);
+
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $plumbing->id,
+            'district_id' => $district->id,
+            'city_id' => $city->id,
+            'area_id' => $area->id,
+            'name' => 'AquaFix Services',
+            'description' => 'Pipe leak repair, drain cleaning and bathroom plumbing.',
+            'services' => ['Leak repair', 'Pipe replacement'],
+            'is_approved' => true,
+        ]);
+
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $decor->id,
+            'district_id' => $district->id,
+            'city_id' => $city->id,
+            'area_id' => $area->id,
+            'name' => 'Canvas Decor Studio',
+            'description' => 'Interior styling and wall decor.',
+            'is_approved' => true,
+        ]);
+
+        $this->fakeEmbeddingResponses();
+
+        $response = $this->getJson('/api/v1/businesses?q=need a plumber for leaking pipe');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.name', 'AquaFix Services')
+            ->assertJsonPath('meta.total', 2);
+    }
+
     public function test_it_accepts_webp_images_when_creating_products(): void
     {
         $owner = User::factory()->create();
@@ -295,5 +402,38 @@ class BusinessDirectoryApiTest extends TestCase
         $district = District::create(['state_id' => $state->id, 'name' => 'Ernakulam']);
 
         return [$district, $city];
+    }
+
+    private function fakeEmbeddingResponses(): void
+    {
+        Http::fake(function ($request) {
+            $input = $request['input'];
+
+            if (! is_array($input)) {
+                $input = [$input];
+            }
+
+            $vectors = array_map(function ($text) {
+                $lower = mb_strtolower((string) $text, 'UTF-8');
+
+                if (str_contains($lower, 'leaking') || str_contains($lower, 'plumb') || str_contains($lower, 'pipe')) {
+                    return [1.0, 0.0, 0.0];
+                }
+
+                if (str_contains($lower, 'decor') || str_contains($lower, 'interior') || str_contains($lower, 'wall')) {
+                    return [0.0, 1.0, 0.0];
+                }
+
+                return [0.2, 0.2, 0.2];
+            }, $input);
+
+            return Http::response([
+                'data' => array_map(
+                    fn ($embedding, $index) => ['index' => $index, 'embedding' => $embedding],
+                    $vectors,
+                    array_keys($vectors)
+                ),
+            ]);
+        });
     }
 }
