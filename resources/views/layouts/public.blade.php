@@ -283,29 +283,31 @@
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <h1>🏢 Business Directory</h1>
-            <nav>
-                <a href="/">Home</a>
-                <a href="/offers">Offers</a>
-                <a href="/admin">Admin</a>
-            </nav>
+    @unless (trim($__env->yieldContent('hide_public_header')) === '1')
+        <nav class="navbar">
+            <div class="container">
+                <h1>🏢 Business Directory</h1>
+                <nav>
+                    <a href="/">Home</a>
+                    <a href="/offers">Offers</a>
+                    <a href="/admin">Admin</a>
+                </nav>
 
-            <div class="auth">
-                @guest
-                    <a class="btn-link" href="{{ route('mobile.login') }}">Login</a>
-                    <a class="btn-primary" href="{{ route('mobile.register') }}">Register</a>
-                @else
-                    <span style="margin-right:6px">{{ auth()->user()->name }}</span>
-                    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-                        @csrf
-                        <button class="btn-link" type="submit">Logout</button>
-                    </form>
-                @endguest
+                <div class="auth">
+                    @guest
+                        <a class="btn-link" href="{{ route('mobile.login') }}">Login</a>
+                        <a class="btn-primary" href="{{ route('mobile.register') }}">Register</a>
+                    @else
+                        <span style="margin-right:6px">{{ auth()->user()->name }}</span>
+                        <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+                            @csrf
+                            <button class="btn-link" type="submit">Logout</button>
+                        </form>
+                    @endguest
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+    @endunless
 
     @yield('content')
 </body>

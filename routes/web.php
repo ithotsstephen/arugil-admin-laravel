@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\ReviewsController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UsersController;
+use App\Http\Controllers\AccountDeletionController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Http\Request;
@@ -30,6 +31,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/offers', [HomeController::class, 'offers'])->name('offers.index');
 Route::get('/business/{business}', [HomeController::class, 'show'])->name('business.show');
+Route::get('/delete-account', [AccountDeletionController::class, 'show'])->name('account.delete.show');
+Route::post('/delete-account', [AccountDeletionController::class, 'destroy'])->name('account.delete.destroy');
 
 Route::get('/login', [LoginController::class, 'show'])->name('login')->middleware('guest');
 Route::post('/login', [LoginController::class, 'store'])->name('login.store')->middleware('guest');
