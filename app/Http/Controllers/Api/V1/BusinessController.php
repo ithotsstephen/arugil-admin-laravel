@@ -14,10 +14,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class BusinessController extends Controller
 {
+    private const MIN_SEMANTIC_SIMILARITY = 0.72;
+
     public function __construct(
         private OpenAiEmbeddingSemanticSearchService $semanticSearch,
     ) {
@@ -37,10 +40,40 @@ class BusinessController extends Controller
             'sort' => 'nullable|string|max:50',
         ]);
 
-        $cacheKey = 'business_search_' . md5($request->fullUrl());
-
         // limit per_page to prevent excessive load (validated already)
         $perPage = (int) $request->input('per_page', 15);
+        $page = (int) $request->input('page', 1);
+
+        if ($request->filled('q')) {
+            $searchQuery = trim($request->string('q')->toString());
+            $query = $this->approvedBusinessesQuery();
+
+            // Accept both legacy params and `filter[...]` style
+            $filters = $request->input('filter', []);
+            if (! is_array($filters)) {
+                $filters = [];
+            }
+
+            $categoryId = $filters['category'] ?? $request->input('category_id');
+            $this->applyCategoryFilters($query, $categoryId ? (int) $categoryId : null, null);
+
+            $featured = null;
+            if (array_key_exists('featured', $filters)) {
+                $featured = filter_var($filters['featured'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            } elseif ($request->has('featured')) {
+                $featured = $request->boolean('featured');
+            }
+
+            if ($featured === true) {
+                $query->where('is_featured', true);
+            }
+
+            return $this->paginatedResponse(
+                $this->searchResultsPaginator($query, $searchQuery, $perPage, $page)
+            );
+        }
+
+        $cacheKey = 'business_search_' . md5($request->fullUrl());
 
         // Default sort and whitelist allowed fields to prevent SQL injection
         $sort = $request->input('sort', '-created_at');
@@ -52,7 +85,7 @@ class BusinessController extends Controller
 
             // Accept both legacy params and `filter[...]` style
             $filters = $request->input('filter', []);
-            if (!is_array($filters)) {
+            if (! is_array($filters)) {
                 $filters = [];
             }
 
@@ -69,24 +102,6 @@ class BusinessController extends Controller
 
             if ($featured === true) {
                 $query->where('is_featured', true);
-            }
-
-            $semanticBaseQuery = clone $query;
-
-            // Lightweight search: name, keywords, category
-            if ($request->filled('q')) {
-                $semanticPaginator = $this->semanticSearchPaginator(
-                    $semanticBaseQuery,
-                    $request->string('q')->toString(),
-                    $perPage,
-                    (int) $request->input('page', 1)
-                );
-
-                if ($semanticPaginator instanceof LengthAwarePaginator) {
-                    return $semanticPaginator;
-                }
-
-                $this->applySearchFilter($query, $request->string('q')->toString());
             }
 
             // Sorting: support -field desc syntax and friendly aliases, but whitelist fields
@@ -181,31 +196,9 @@ class BusinessController extends Controller
         $perPage = (int) ($validated['per_page'] ?? 20);
         $page = (int) ($validated['page'] ?? 1);
 
-        $semanticPaginator = $this->semanticSearchPaginator(
-            $this->approvedBusinessesQuery(),
-            $search,
-            $perPage,
-            $page
+        return $this->paginatedResponse(
+            $this->searchResultsPaginator($this->approvedBusinessesQuery(), $search, $perPage, $page)
         );
-
-        if ($semanticPaginator instanceof LengthAwarePaginator) {
-            return $this->paginatedResponse($semanticPaginator);
-        }
-
-        $query = $this->approvedBusinessesQuery();
-        $this->applySearchFilter($query, $search);
-
-        $like = '%' . mb_strtolower($search, 'UTF-8') . '%';
-
-        $paginator = $query
-            ->with(['category.parent', 'owner', 'area', 'district'])
-            ->withCount('likes')
-            ->orderByRaw("CASE WHEN LOWER(COALESCE(businesses.name, '')) LIKE ? THEN 0 ELSE 1 END", [$like])
-            ->orderBy('businesses.name')
-            ->paginate($perPage)
-            ->withQueryString();
-
-        return $this->paginatedResponse($paginator);
     }
 
     public function show(\Illuminate\Http\Request $request, Business $business)
@@ -365,7 +358,7 @@ class BusinessController extends Controller
         $query->whereIn('category_id', $categoryIds);
     }
 
-    private function applySearchFilter(Builder $query, string $search): void
+    private function applyKeywordFallbackSearchFilter(Builder $query, string $search): void
     {
         $search = trim($search);
 
@@ -376,84 +369,99 @@ class BusinessController extends Controller
         $like = '%' . mb_strtolower($search, 'UTF-8') . '%';
         $keywordsExpression = $this->searchableJsonTextExpression('keywords');
         $servicesExpression = $this->searchableJsonTextExpression('services');
-        $offersExpression = $this->searchableJsonTextExpression('offers');
 
-        $query->where(function (Builder $builder) use ($like, $keywordsExpression, $servicesExpression, $offersExpression) {
+        $query->where(function (Builder $builder) use ($like, $keywordsExpression, $servicesExpression) {
             $builder->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like])
                 ->orWhereRaw("LOWER(COALESCE(description, '')) LIKE ?", [$like])
-                ->orWhereRaw("LOWER(COALESCE(address, '')) LIKE ?", [$like])
-                ->orWhereRaw("LOWER(COALESCE(pincode, '')) LIKE ?", [$like])
-                ->orWhereRaw("LOWER(COALESCE(phone, '')) LIKE ?", [$like])
-                ->orWhereRaw("LOWER(COALESCE(whatsapp, '')) LIKE ?", [$like])
-                ->orWhereRaw("LOWER(COALESCE(email, '')) LIKE ?", [$like])
-                ->orWhereRaw("LOWER(COALESCE(owner_name, '')) LIKE ?", [$like])
                 ->orWhereRaw("LOWER({$keywordsExpression}) LIKE ?", [$like])
                 ->orWhereRaw("LOWER({$servicesExpression}) LIKE ?", [$like])
-                ->orWhereRaw("LOWER({$offersExpression}) LIKE ?", [$like])
                 ->orWhereHas('category', function (Builder $categoryQuery) use ($like) {
-                    $categoryQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like])
-                        ->orWhereHas('parent', function (Builder $parentQuery) use ($like) {
-                            $parentQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
-                        });
-                })
-                ->orWhereHas('city', function (Builder $cityQuery) use ($like) {
-                    $cityQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
-                })
-                ->orWhereHas('district', function (Builder $districtQuery) use ($like) {
-                    $districtQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
-                })
-                ->orWhereHas('area', function (Builder $areaQuery) use ($like) {
-                    $areaQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
+                    $categoryQuery->whereRaw("LOWER(COALESCE(name, '')) LIKE ?", [$like]);
                 });
         });
     }
 
-    private function semanticSearchPaginator(Builder $baseQuery, string $search, int $perPage, int $page): ?LengthAwarePaginator
+    private function searchResultsPaginator(Builder $baseQuery, string $search, int $perPage, int $page): LengthAwarePaginator
     {
-        if (! $this->semanticSearch->isConfigured()) {
-            return null;
+        $search = trim($search);
+
+        if ($search === '') {
+            $paginator = $this->paginateCollection(collect(), $perPage, $page);
+            $this->logSearchOutcome($search, false, 0, false, 0);
+
+            return $paginator;
         }
 
-        $candidates = $this->semanticCandidates($baseQuery, $search);
+        $semanticPathUsed = false;
+        $keywordFallbackUsed = false;
+        $semanticMatchesCount = 0;
 
-        if ($candidates->isEmpty()) {
-            return null;
+        if ($search !== '' && $this->semanticSearch->isConfigured()) {
+            $semanticCandidates = $this->semanticCandidates($baseQuery);
+
+            if ($semanticCandidates->isNotEmpty()) {
+                $semanticPathUsed = true;
+
+                $semanticMatches = $this->semanticSearch
+                    ->rankBusinesses($search, $semanticCandidates)
+                    ->filter(fn (Business $business) => (float) $business->getAttribute('semantic_score') >= self::MIN_SEMANTIC_SIMILARITY)
+                    ->values();
+
+                $semanticMatchesCount = $semanticMatches->count();
+
+                if ($semanticMatchesCount > 0) {
+                    $paginator = $this->paginateCollection($semanticMatches, $perPage, $page);
+                    $this->logSearchOutcome($search, $semanticPathUsed, $semanticMatchesCount, $keywordFallbackUsed, $paginator->total());
+
+                    return $paginator;
+                }
+            }
         }
 
-        $ranked = $this->semanticSearch->rankBusinesses($search, $candidates);
+        $keywordFallbackUsed = true;
+        $keywordQuery = clone $baseQuery;
+        $this->applyKeywordFallbackSearchFilter($keywordQuery, $search);
 
-        return $this->paginateCollection($ranked, $perPage, $page);
-    }
-
-    private function semanticCandidates(Builder $baseQuery, string $search): Collection
-    {
-        $relations = ['category.parent', 'owner', 'area', 'district', 'city'];
         $like = '%' . mb_strtolower($search, 'UTF-8') . '%';
 
-        $lexicalQuery = clone $baseQuery;
-        $this->applySearchFilter($lexicalQuery, $search);
-
-        $lexical = $lexicalQuery
-            ->with($relations)
+        $paginator = $keywordQuery
+            ->with(['category.parent', 'owner', 'area', 'district'])
             ->withCount('likes')
             ->orderByRaw("CASE WHEN LOWER(COALESCE(businesses.name, '')) LIKE ? THEN 0 ELSE 1 END", [$like])
             ->orderBy('businesses.name')
-            ->limit(30)
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
-        $broad = (clone $baseQuery)
+        $this->logSearchOutcome($search, $semanticPathUsed, $semanticMatchesCount, $keywordFallbackUsed, $paginator->total());
+
+        return $paginator;
+    }
+
+    private function semanticCandidates(Builder $baseQuery): Collection
+    {
+        $relations = ['category.parent', 'owner', 'area', 'district', 'city'];
+
+        return (clone $baseQuery)
             ->with($relations)
             ->withCount('likes')
-            ->orderByDesc('is_featured')
-            ->orderByDesc('likes_count')
-            ->orderByDesc('created_at')
-            ->limit(30)
-            ->get();
-
-        return $lexical
-            ->concat($broad)
-            ->unique('id')
+            ->get()
             ->values();
+    }
+
+    private function logSearchOutcome(
+        string $search,
+        bool $semanticPathUsed,
+        int $semanticMatchesCount,
+        bool $keywordFallbackUsed,
+        int $finalResultCount
+    ): void {
+        Log::info('Business search executed', [
+            'search_query' => $search,
+            'semantic_path_used' => $semanticPathUsed,
+            'semantic_matches_above_threshold' => $semanticMatchesCount,
+            'keyword_fallback_used' => $keywordFallbackUsed,
+            'final_result_count' => $finalResultCount,
+        ]);
     }
 
     private function paginateCollection(Collection $items, int $perPage, int $page): LengthAwarePaginator

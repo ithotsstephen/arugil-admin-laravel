@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -211,15 +212,9 @@ class BusinessDirectoryApiTest extends TestCase
             ->assertJsonMissing(['name' => 'Zulu Electrical']);
     }
 
-    public function test_it_searches_businesses_across_related_location_fields_and_prioritizes_name_matches(): void
+    public function test_it_uses_keyword_fallback_and_prioritizes_name_matches(): void
     {
         [$district, $city] = $this->createLocation();
-        $plumbingArea = Area::create([
-            'city_id' => $city->id,
-            'district_id' => $district->id,
-            'name' => 'Plumbing Nagar',
-            'pincode' => '682001',
-        ]);
         $marketArea = Area::create([
             'city_id' => $city->id,
             'district_id' => $district->id,
@@ -233,10 +228,11 @@ class BusinessDirectoryApiTest extends TestCase
 
         Business::create([
             'user_id' => $owner->id,
-            'category_id' => $services->id,
+            'category_id' => $plumbing->id,
             'district_id' => $district->id,
-            'area_id' => $plumbingArea->id,
+            'area_id' => $marketArea->id,
             'name' => 'Ordinary Store',
+            'keywords' => ['pipes', 'fixtures'],
             'is_approved' => true,
         ]);
         Business::create([
@@ -309,9 +305,9 @@ class BusinessDirectoryApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonCount(2, 'data')
+            ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'AquaFix Services')
-            ->assertJsonPath('meta.total', 2);
+            ->assertJsonPath('meta.total', 1);
     }
 
     public function test_it_uses_openai_embeddings_to_semantically_rank_index_results_when_q_is_present(): void
@@ -362,9 +358,127 @@ class BusinessDirectoryApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonCount(2, 'data')
+            ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'AquaFix Services')
-            ->assertJsonPath('meta.total', 2);
+            ->assertJsonPath('meta.total', 1);
+    }
+
+    public function test_it_returns_empty_results_when_search_query_has_no_semantic_or_keyword_matches(): void
+    {
+        config()->set('services.openai.api_key', 'test-openai-key');
+        config()->set('services.openai.embedding_model', 'text-embedding-3-small');
+
+        [$district, $city] = $this->createLocation();
+        $area = Area::create([
+            'city_id' => $city->id,
+            'district_id' => $district->id,
+            'name' => 'Town Center',
+            'pincode' => '682003',
+        ]);
+
+        $owner = User::factory()->create();
+        $services = Category::create(['name' => 'Services']);
+
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $services->id,
+            'district_id' => $district->id,
+            'city_id' => $city->id,
+            'area_id' => $area->id,
+            'name' => 'AquaFix Services',
+            'description' => 'Pipe leak repair, drain cleaning and bathroom plumbing.',
+            'services' => ['Leak repair', 'Pipe replacement'],
+            'is_approved' => true,
+        ]);
+
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $services->id,
+            'district_id' => $district->id,
+            'city_id' => $city->id,
+            'area_id' => $area->id,
+            'name' => 'Canvas Decor Studio',
+            'description' => 'Interior styling and wall decor.',
+            'is_approved' => true,
+        ]);
+
+        $this->fakeLowSemanticEmbeddingResponses();
+
+        $response = $this->getJson('/api/v1/businesses?q=quantum tax advisor');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(0, 'data')
+            ->assertJsonPath('meta.total', 0);
+    }
+
+    public function test_it_uses_keyword_fallback_when_semantic_matches_do_not_pass_threshold(): void
+    {
+        config()->set('services.openai.api_key', 'test-openai-key');
+        config()->set('services.openai.embedding_model', 'text-embedding-3-small');
+
+        [$district, $city] = $this->createLocation();
+        $area = Area::create([
+            'city_id' => $city->id,
+            'district_id' => $district->id,
+            'name' => 'Town Center',
+            'pincode' => '682003',
+        ]);
+
+        $owner = User::factory()->create();
+        $services = Category::create(['name' => 'Services']);
+
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $services->id,
+            'district_id' => $district->id,
+            'city_id' => $city->id,
+            'area_id' => $area->id,
+            'name' => 'Bouquet Corner',
+            'description' => 'Fresh flower arrangements for events.',
+            'keywords' => ['bouquet', 'flowers'],
+            'is_approved' => true,
+        ]);
+
+        $this->fakeLowSemanticEmbeddingResponses();
+
+        $response = $this->getJson('/api/v1/businesses/search?q=bouquet');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Bouquet Corner')
+            ->assertJsonPath('meta.total', 1);
+    }
+
+    public function test_it_logs_search_execution_details(): void
+    {
+        Log::spy();
+
+        $owner = User::factory()->create();
+        $services = Category::create(['name' => 'Services']);
+
+        Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $services->id,
+            'name' => 'Bouquet Corner',
+            'keywords' => ['bouquet', 'flowers'],
+            'is_approved' => true,
+        ]);
+
+        $this->getJson('/api/v1/businesses/search?q=bouquet')
+            ->assertOk();
+
+        Log::shouldHaveReceived('info')->withArgs(function (string $message, array $context) {
+            return $message === 'Business search executed'
+                && $context['search_query'] === 'bouquet'
+                && array_key_exists('semantic_path_used', $context)
+                && array_key_exists('semantic_matches_above_threshold', $context)
+                && array_key_exists('keyword_fallback_used', $context)
+                && $context['final_result_count'] === 1;
+        })->once();
     }
 
     public function test_it_accepts_webp_images_when_creating_products(): void
@@ -413,18 +527,35 @@ class BusinessDirectoryApiTest extends TestCase
                 $input = [$input];
             }
 
+            $vectors = array_map(fn ($text) => $this->fakeEmbeddingVectorFor((string) $text), $input);
+
+            return Http::response([
+                'data' => array_map(
+                    fn ($embedding, $index) => ['index' => $index, 'embedding' => $embedding],
+                    $vectors,
+                    array_keys($vectors)
+                ),
+            ]);
+        });
+    }
+
+    private function fakeLowSemanticEmbeddingResponses(): void
+    {
+        Http::fake(function ($request) {
+            $input = $request['input'];
+
+            if (! is_array($input)) {
+                $input = [$input];
+            }
+
             $vectors = array_map(function ($text) {
                 $lower = mb_strtolower((string) $text, 'UTF-8');
 
-                if (str_contains($lower, 'leaking') || str_contains($lower, 'plumb') || str_contains($lower, 'pipe')) {
-                    return [1.0, 0.0, 0.0];
-                }
-
-                if (str_contains($lower, 'decor') || str_contains($lower, 'interior') || str_contains($lower, 'wall')) {
+                if (str_starts_with($lower, 'name:')) {
                     return [0.0, 1.0, 0.0];
                 }
 
-                return [0.2, 0.2, 0.2];
+                return [1.0, 0.0, 0.0];
             }, $input);
 
             return Http::response([
@@ -435,5 +566,62 @@ class BusinessDirectoryApiTest extends TestCase
                 ),
             ]);
         });
+    }
+
+    private function fakeEmbeddingVectorFor(string $text): array
+    {
+        $lower = mb_strtolower($text, 'UTF-8');
+        $tokens = preg_split('/[^[:alnum:]]+/u', $lower, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $vector = array_fill(0, 12, 0.0);
+
+        foreach ($tokens as $token) {
+            $normalized = $this->normalizeSearchToken($token);
+
+            if (in_array($normalized, ['plumb', 'pipe', 'leak', 'sink', 'drain'], true)) {
+                $vector[0] += 1.0;
+            }
+
+            if (in_array($normalized, ['decor', 'interior', 'wall', 'style'], true)) {
+                $vector[1] += 1.0;
+            }
+
+            if (in_array($normalized, ['bouquet', 'flower', 'floral'], true)) {
+                $vector[2] += 1.0;
+            }
+
+            $bucket = abs(crc32($normalized)) % 9;
+            $vector[$bucket + 3] += 1.0;
+        }
+
+        if (array_sum($vector) === 0.0) {
+            $vector[11] = 1.0;
+        }
+
+        return $vector;
+    }
+
+    private function normalizeSearchToken(string $token): string
+    {
+        if (str_contains($token, 'plumb')) {
+            return 'plumb';
+        }
+
+        if (str_contains($token, 'leak')) {
+            return 'leak';
+        }
+
+        if (str_contains($token, 'decor')) {
+            return 'decor';
+        }
+
+        if (str_contains($token, 'interior')) {
+            return 'interior';
+        }
+
+        if (str_contains($token, 'flower')) {
+            return 'flower';
+        }
+
+        return $token;
     }
 }
