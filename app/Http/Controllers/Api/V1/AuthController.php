@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\MobileUser;
 use App\Models\User;
+use App\Services\UserAccountDeletionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +15,11 @@ use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private UserAccountDeletionService $userAccountDeletionService,
+    ) {
+    }
+
     public function register(Request $request)
     {
         $data = $request->validate([
@@ -82,6 +89,28 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out']);
+    }
+
+    public function destroyAccount(Request $request)
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'current_password' => [
+                $user->provider ? 'nullable' : 'required',
+                'string',
+            ],
+        ]);
+
+        if (!$user->provider && !Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The provided password is incorrect.'],
+            ]);
+        }
+
+        $this->userAccountDeletionService->delete($user);
+
+        return response()->json(['message' => 'Account deleted successfully.']);
     }
 
     /**
@@ -206,7 +235,7 @@ class AuthController extends Controller
             }
         }
 
-        \App\Models\MobileUser::updateOrCreate(
+        MobileUser::updateOrCreate(
             ['email' => $reg['email']],
             [
                 'full_name' => $reg['full_name'],

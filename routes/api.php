@@ -164,6 +164,7 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::post('auth/logout', [AuthController::class, 'logout']);
+        Route::delete('auth/account', [AuthController::class, 'destroyAccount']);
 
         Route::post('businesses', [BusinessController::class, 'store']);
         Route::put('businesses/{business}', [BusinessController::class, 'update']);
