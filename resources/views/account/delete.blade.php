@@ -6,14 +6,14 @@
 @section('content')
 <section style="padding: 56px 20px;">
     <div style="max-width: 760px; margin: 0 auto 28px; text-align: center;">
-        <img src="{{ asset('splash-logo.png') }}" alt="Arugil" style="width: 112px; height: 112px; object-fit: contain; display: inline-block;">
+        <img src="{{ asset('splash-logo.png') }}" alt="Arugamai" style="width: 112px; height: 112px; object-fit: contain; display: inline-block;">
     </div>
 
     <div style="max-width: 760px; margin: 0 auto; background: var(--card); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08); overflow: hidden;">
         <div style="padding: 32px; background: linear-gradient(135deg, #fee2e2 0%, #fff7ed 100%); border-bottom: 1px solid var(--border);">
-            <p style="margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #b91c1c;">Arugil account removal</p>
+            <p style="margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #b91c1c;">Arugamai account removal</p>
             <h2 style="margin: 0 0 10px; font-size: 34px; line-height: 1.15;">Delete your account</h2>
-            <p style="margin: 0; color: var(--text-muted); max-width: 560px;">Use this page to permanently remove your Arugil account and associated app access. This action cannot be undone.</p>
+            <p style="margin: 0; color: var(--text-muted); max-width: 560px;">Use this page to permanently remove your Arugamai account and associated app access. This action cannot be undone.</p>
         </div>
 
         <div style="padding: 32px; display: grid; gap: 28px;">

@@ -28,8 +28,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/offers', [HomeController::class, 'offers'])->name('offers.index');
+Route::redirect('/', '/welcome')->name('home');
+Route::get('/welcome', fn () => view('welcome'))->name('welcome');
+Route::redirect('/offers', '/welcome')->name('offers.index');
 Route::get('/business/{business}', [HomeController::class, 'show'])->name('business.show');
 Route::get('/delete-account', [AccountDeletionController::class, 'show'])->name('account.delete.show');
 Route::post('/delete-account', [AccountDeletionController::class, 'destroy'])->name('account.delete.destroy');

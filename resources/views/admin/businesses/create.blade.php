@@ -220,11 +220,11 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div>
                         <label>Start Date & Time</label>
-                        <input type="datetime-local" name="offers[0][start_date]" value="{{ now()->format('Y-m-d\TH:i') }}" required>
+                        <input type="datetime-local" name="offers[0][start_date]" value="{{ now()->format('Y-m-d\TH:i') }}">
                     </div>
                     <div>
                         <label>End Date & Time</label>
-                        <input type="datetime-local" name="offers[0][end_date]" value="{{ now()->addDay()->format('Y-m-d\TH:i') }}" required>
+                        <input type="datetime-local" name="offers[0][end_date]" value="{{ now()->addDay()->format('Y-m-d\TH:i') }}">
                     </div>
                 </div>
             </div>
@@ -547,11 +547,11 @@ function addOffer() {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div>
                 <label>Start Date & Time</label>
-                <input type="datetime-local" name="offers[${offerIndex}][start_date]" value="${startDate}" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px;">
+                <input type="datetime-local" name="offers[${offerIndex}][start_date]" value="${startDate}" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px;">
             </div>
             <div>
                 <label>End Date & Time</label>
-                <input type="datetime-local" name="offers[${offerIndex}][end_date]" value="${endDate}" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px;">
+                <input type="datetime-local" name="offers[${offerIndex}][end_date]" value="${endDate}" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px;">
             </div>
         </div>
     `;
